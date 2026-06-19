@@ -1,0 +1,19 @@
+# Configuración del proyecto Supabase (CLI). Doc: https://supabase.com/docs/guides/cli/config
+# project_id se usa al hacer `supabase link --project-ref <ref>`.
+project_id = "gastos-app"
+
+[db]
+major_version = 15
+
+[auth]
+# URL base del sitio para los enlaces de los emails (confirmación, recuperación).
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+# Email/contraseña. En desarrollo podés desactivar la confirmación por email
+# para probar el ciclo completo sin servidor de correo.
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[storage]
+enabled = true

@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+
+  /* Tema oscuro cálido-neutro */
+  --background: #1b1b1d;     /* fondo de la app */
+  --surface: #29292c;       /* tarjetas y filas */
+  --surface-2: #333337;     /* inputs, hover, botones de ícono */
+  --foreground: #f3f3f4;    /* títulos y montos */
+  --muted: #9a9aa1;         /* texto secundario */
+  --border: #3a3a3f;        /* bordes sutiles */
+
+  --brand: #34b27b;         /* acción principal / pagado */
+  --brand-hover: #2c9b6a;
+  --danger: #e5564c;        /* vencidos / errores */
+  --danger-surface: #4a2321;/* fondo tarjeta vencidos */
+  --warning: #d6a44a;       /* "a confirmar" */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Todos los montos usan cifras tabulares para que columnas y totales alineen. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pickers nativos de fecha/mes en tema oscuro: el popup del navegador respeta
+   color-scheme y el ícono del calendario queda visible sobre el fondo oscuro. */
+input[type='date'],
+input[type='month'],
+input[type='time'] {
+  color-scheme: dark;
+}
+input::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Tira de navegación scrolleable en móvil sin barra visible. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animaciones sutiles (modales, toasts). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+.animate-scale-in {
+  animation: scale-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.animate-toast-in {
+  animation: toast-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-toast-in {
+    animation: none;
+  }
+}
