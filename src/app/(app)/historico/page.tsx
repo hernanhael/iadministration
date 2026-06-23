@@ -13,7 +13,7 @@ const actual = periodoActual();
 
 export default function HistoricoPage() {
   const { gastos, cargando } = useGastos();
-  const { planillas } = usePlanillas();
+  const { planillas } = usePlanillas({ incluirInactivas: true });
 
   const [tipo, setTipo] = useState<'egreso' | 'ingreso'>('egreso');
 

@@ -58,6 +58,26 @@ input::-webkit-calendar-picker-indicator {
 input::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+/* Forzar que los segmentos de fecha (dd/mm/aaaa) hereden el color del texto
+   del componente Input en vez de usar el color del sistema operativo. */
+input[type='date']::-webkit-datetime-edit,
+input[type='date']::-webkit-datetime-edit-fields-wrapper,
+input[type='date']::-webkit-datetime-edit-day-field,
+input[type='date']::-webkit-datetime-edit-month-field,
+input[type='date']::-webkit-datetime-edit-year-field,
+input[type='date']::-webkit-datetime-edit-text {
+  color: inherit;
+}
+/* Ocultar las flechas de los inputs numéricos — usamos type="text" para montos
+   pero por si acaso queda algún number en el codebase. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
 
 /* Tira de navegación scrolleable en móvil sin barra visible. */
 .no-scrollbar {

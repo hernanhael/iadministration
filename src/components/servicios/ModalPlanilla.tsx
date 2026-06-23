@@ -45,14 +45,13 @@ export function ModalPlanilla({ abierto, onCerrar, planillaInicial, tipoInicial 
 
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} titulo={editando ? 'Editar planilla' : 'Nueva planilla'}>
-      <form onSubmit={enviar} className="flex flex-col gap-4">
+      <form onSubmit={enviar} className="flex flex-col gap-3">
         {error && <FormMessage tipo="error">{error}</FormMessage>}
 
-        {/* Tipo: Egresos / Ingresos */}
-        <div>
-          <Label>Tipo</Label>
-          <div className="mt-1 flex rounded-xl border border-border bg-surface p-1 w-fit">
-            {(['egreso', 'ingreso'] as const).map((t) => (
+        {/* Tipo: solo al crear, no al editar */}
+        {!editando && (
+          <div className="flex rounded-xl border border-border bg-surface p-1 w-fit">
+            {(['ingreso', 'egreso'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -67,7 +66,7 @@ export function ModalPlanilla({ abierto, onCerrar, planillaInicial, tipoInicial 
               </button>
             ))}
           </div>
-        </div>
+        )}
 
         <div>
           <Label htmlFor="plnombre">Nombre</Label>
@@ -75,12 +74,12 @@ export function ModalPlanilla({ abierto, onCerrar, planillaInicial, tipoInicial 
         </div>
 
         <div>
-          <Label htmlFor="pldetalle">Detalle (opcional)</Label>
+          <Label htmlFor="pldetalle">Detalle <span className="text-muted font-normal">(opcional)</span></Label>
           <Input
             id="pldetalle"
             value={detalle}
             onChange={(e) => setDetalle(e.target.value)}
-            placeholder="Clío Mío / Ituzaingó 1247"
+            placeholder="Clío Mío, Ituzaingó 1247…"
           />
         </div>
 
@@ -92,7 +91,7 @@ export function ModalPlanilla({ abierto, onCerrar, planillaInicial, tipoInicial 
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="h-11 w-12 cursor-pointer rounded-lg border border-border bg-surface"
+              className="h-9 w-10 cursor-pointer rounded-lg border border-border bg-surface"
             />
             <Input
               value={color}
@@ -102,7 +101,7 @@ export function ModalPlanilla({ abierto, onCerrar, planillaInicial, tipoInicial 
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variante="secondary" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </Button>

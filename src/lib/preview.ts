@@ -13,10 +13,10 @@ export const ERROR_PREVIEW =
 const ahora = new Date().toISOString();
 
 export const DEMO_PLANILLAS: Planilla[] = [
-  { id: 'pl-auto', user_id: 'demo', nombre: 'Auto', detalle: 'Clío Mío', color: '#D98A4B', tipo: 'egreso', created_at: ahora },
-  { id: 'pl-inm', user_id: 'demo', nombre: 'Inmueble', detalle: 'Ituzaingó 1247, Yerba Buena', color: '#6A8D73', tipo: 'egreso', created_at: ahora },
-  { id: 'pl-per', user_id: 'demo', nombre: 'Personal', detalle: null, color: '#5B7DB1', tipo: 'egreso', created_at: ahora },
-  { id: 'pl-trabajo', user_id: 'demo', nombre: 'Trabajo', detalle: null, color: '#4A90A4', tipo: 'ingreso', created_at: ahora },
+  { id: 'pl-auto', user_id: 'demo', nombre: 'Auto', detalle: 'Clío Mío', color: '#D98A4B', tipo: 'egreso', activo: true, created_at: ahora },
+  { id: 'pl-inm', user_id: 'demo', nombre: 'Inmueble', detalle: 'Ituzaingó 1247, Yerba Buena', color: '#6A8D73', tipo: 'egreso', activo: true, created_at: ahora },
+  { id: 'pl-per', user_id: 'demo', nombre: 'Personal', detalle: null, color: '#5B7DB1', tipo: 'egreso', activo: true, created_at: ahora },
+  { id: 'pl-trabajo', user_id: 'demo', nombre: 'Trabajo', detalle: null, color: '#4A90A4', tipo: 'ingreso', activo: true, created_at: ahora },
 ];
 
 function planillaResumen(plId: string) {

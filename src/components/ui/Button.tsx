@@ -9,13 +9,13 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const estilos: Record<Variante, string> = {
   primary:
-    'bg-brand text-white hover:bg-brand-hover disabled:bg-brand/50',
+    'border border-brand/40 bg-brand/8 text-brand hover:bg-brand/15 disabled:opacity-50',
   secondary:
     'bg-surface text-foreground border border-border hover:bg-background disabled:opacity-50',
   ghost:
     'bg-transparent text-muted hover:text-foreground hover:bg-background disabled:opacity-50',
   danger:
-    'bg-danger text-white hover:opacity-90 disabled:opacity-50',
+    'border border-danger/40 bg-danger/8 text-danger hover:bg-danger/15 disabled:opacity-50',
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(

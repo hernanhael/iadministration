@@ -30,8 +30,8 @@ interface Props {
   /** Documento adjunto (imagen/PDF): mismo OCR que la cámara; tampoco se guarda. */
   onDoc?: (g: GastoConServicio) => void;
   onEditarServicio?: (g: GastoConServicio) => void;
+  onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
-  onEliminar?: (g: GastoConServicio) => void;
   onTogglePago?: (g: GastoConServicio) => void;
   /** Gestionar las cargas del mes de un servicio acumulable (ej. nafta). */
   onCargas?: (g: GastoConServicio) => void;
@@ -65,8 +65,8 @@ export function GrillaGastos({
   onFoto,
   onDoc,
   onEditarServicio,
+  onEliminarServicio,
   onEditarGasto,
-  onEliminar,
   onTogglePago,
   onCargas,
   onAgregarServicio,
@@ -203,12 +203,12 @@ export function GrillaGastos({
     const menu = acum
       ? [
           { label: 'Editar servicio', onClick: () => onEditarServicio?.(g) },
-          { label: 'Eliminar del mes', onClick: () => onEliminar?.(g), peligro: true },
+          { label: 'Eliminar servicio', onClick: () => onEliminarServicio?.(g), peligro: true },
         ]
       : [
           { label: 'Editar servicio', onClick: () => onEditarServicio?.(g) },
           { label: 'Editar gasto del mes', onClick: () => onEditarGasto?.(g) },
-          { label: 'Eliminar del mes', onClick: () => onEliminar?.(g), peligro: true },
+          { label: 'Eliminar servicio', onClick: () => onEliminarServicio?.(g), peligro: true },
         ];
     return (
     <div className="flex items-center justify-end gap-1.5">
@@ -349,7 +349,7 @@ export function GrillaGastos({
           onClick={onAgregarServicio}
           className="flex w-full items-center justify-center gap-1.5 border-t border-border px-4 py-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2/40 hover:text-foreground"
         >
-          <IconMas size={16} /> Agregar servicio
+          <IconMas size={16} /> Agregar gasto o servicio
         </button>
       )}
 
@@ -367,7 +367,7 @@ export function GrillaGastos({
               colorPie === 'success' ? 'text-emerald-400' : 'text-danger'
             }`}
           >
-            Total {pieTotal.label}
+            Total
           </span>
           <span
             className={`tabular text-base font-extrabold ${

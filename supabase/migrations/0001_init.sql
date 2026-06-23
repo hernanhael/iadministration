@@ -26,7 +26,7 @@ create table if not exists planillas (
 create table if not exists servicios (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  planilla_id uuid not null references planillas(id) on delete restrict,
+  planilla_id uuid not null references planillas(id) on delete cascade,
   nombre text not null,            -- ej: "Luz"
   empresa text,                    -- proveedor, ej: "EDET"
   nro_cliente text,                -- N° de cliente/cuenta en la empresa, ej: "3712458-001"
@@ -89,32 +89,7 @@ create policy "solo_propias" on gastos for all
 -- extraer monto/vencimiento y la imagen se descarta. No hay bucket ni archivos.
 -- ----------------------------------------------------------------------------
 
--- ----------------------------------------------------------------------------
--- Seed de planillas iniciales al registrarse un usuario
--- (evita arrancar con la app vacía — principal causa de abandono temprano).
--- Los servicios los crea cada usuario dentro de su planilla.
--- ----------------------------------------------------------------------------
-
-create or replace function seed_planillas_usuario()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into planillas (user_id, nombre, detalle, color) values
-    (new.id, 'Auto',     'Clío Mío',                  '#D98A4B'),
-    (new.id, 'Inmueble', 'Ituzaingó 1247, Yerba Buena','#6A8D73'),
-    (new.id, 'Personal', null,                         '#5B7DB1')
-  on conflict (user_id, nombre) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created_seed on auth.users;
-create trigger on_auth_user_created_seed
-  after insert on auth.users
-  for each row execute function seed_planillas_usuario();
+-- (Sin seed automático: el usuario crea sus planillas desde cero al registrarse.)
 
 -- ----------------------------------------------------------------------------
 -- 5. Recurrencia diferida (sin cron): genera los gastos faltantes del período

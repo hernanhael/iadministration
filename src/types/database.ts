@@ -22,6 +22,7 @@ export interface Database {
           detalle: string | null;
           color: string;
           tipo: 'egreso' | 'ingreso';
+          activo: boolean;
           created_at: string;
         };
         Insert: {
@@ -31,6 +32,7 @@ export interface Database {
           detalle?: string | null;
           color?: string;
           tipo?: 'egreso' | 'ingreso';
+          activo?: boolean;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['planillas']['Insert']>;

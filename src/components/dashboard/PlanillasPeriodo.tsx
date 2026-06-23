@@ -28,8 +28,8 @@ interface Props {
   onFoto?: (g: GastoConServicio, archivo: File) => void;
   onDoc?: (g: GastoConServicio) => void;
   onEditarServicio?: (g: GastoConServicio) => void;
+  onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
-  onEliminar?: (g: GastoConServicio) => void;
   onTogglePago?: (g: GastoConServicio) => void;
   onCargas?: (g: GastoConServicio) => void;
   // Gestión de la planilla, desde su propio encabezado (⋯) y el pie de la pila.

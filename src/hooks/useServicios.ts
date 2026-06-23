@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { mensajeError } from '@/lib/errores';
 import { SUPABASE_CONFIGURADO, DEMO_SERVICIOS, ERROR_PREVIEW } from '@/lib/preview';
-import { porNombre } from '@/lib/formateo';
+import { periodoActual, porNombre } from '@/lib/formateo';
 import type { ServicioConPlanilla } from '@/types/modelos';
 
 const SELECT = '*, planillas(nombre, detalle, color, tipo)';
@@ -75,28 +75,25 @@ export function useServicios({ soloActivos = false }: { soloActivos?: boolean } 
     [supabase, recargar],
   );
 
-  // Borrado lógico si el servicio tiene gastos (preserva el historial);
-  // borrado físico solo si no tiene ninguno. Devuelve cuál ocurrió.
+  // Borrado lógico: desactiva el servicio y elimina el gasto no confirmado del mes
+  // actual. El historial de meses anteriores se conserva en Histórico.
   const eliminar = useCallback(
-    async (id: string): Promise<'logico' | 'fisico'> => {
+    async (id: string) => {
       if (!supabase) throw new Error(ERROR_PREVIEW);
-      const { count, error: errCount } = await supabase
+
+      // Borrar gasto no confirmado del mes actual (fila auto-generada aún sin datos)
+      await supabase
         .from('gastos')
-        .select('id', { count: 'exact', head: true })
-        .eq('servicio_id', id);
-      if (errCount) throw new Error(mensajeError(errCount));
+        .delete()
+        .eq('servicio_id', id)
+        .eq('periodo', periodoActual())
+        .eq('monto_confirmado', false);
 
-      if ((count ?? 0) > 0) {
-        const { error } = await supabase.from('servicios').update({ activo: false }).eq('id', id);
-        if (error) throw new Error(mensajeError(error));
-        await recargar();
-        return 'logico';
-      }
-
-      const { error } = await supabase.from('servicios').delete().eq('id', id);
+      // Desactivar el servicio — generar_gastos_periodo lo omitirá en meses futuros
+      const { error } = await supabase.from('servicios').update({ activo: false }).eq('id', id);
       if (error) throw new Error(mensajeError(error));
+
       await recargar();
-      return 'fisico';
     },
     [supabase, recargar],
   );

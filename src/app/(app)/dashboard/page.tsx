@@ -59,7 +59,7 @@ function filaReiniciada(s: ServicioConPlanilla, per: string): GastoConServicio {
 }
 
 export default function MesPage() {
-  const { gastos, cargando, error, crear, actualizar, eliminar, generarPeriodo } = useGastos();
+  const { gastos, cargando, error, recargar: recargarGastos, crear, actualizar, generarPeriodo } = useGastos();
   const serv = useServicios();
   const pl = usePlanillas();
 
@@ -86,7 +86,7 @@ export default function MesPage() {
     modo: 'foto' | 'documento';
     archivo?: File;
   } | null>(null);
-  const [aBorrar, setABorrar] = useState<GastoConServicio | null>(null);
+  const [servicioABorrar, setServicioABorrar] = useState<GastoConServicio | null>(null);
   const [cargasPara, setCargasPara] = useState<{
     gasto: GastoConServicio;
     draft?: Carga;
@@ -172,14 +172,6 @@ export default function MesPage() {
     setServicioModal({ inicial: completo });
   }
 
-  function pedirEliminar(g: GastoConServicio) {
-    if (esNuevo(g)) {
-      setAviso('Ese gasto todavía no existe este mes: se crea al cargar el monto o marcarlo pagado.');
-      return;
-    }
-    setABorrar(g);
-  }
-
   const barraEgresos = tipo === 'egreso' ? (() => {
     const { pagado, total } = resumenBalance.egresos;
     return { pagado, total, pct: total > 0 ? Math.round((pagado / total) * 100) : 0 };
@@ -239,7 +231,7 @@ export default function MesPage() {
           onDoc={(g) => setOcrPara({ gasto: g, modo: 'documento' })}
           onEditarServicio={editarServicio}
           onEditarGasto={(g) => setGastoEnEdicion(g)}
-          onEliminar={pedirEliminar}
+          onEliminarServicio={(g) => setServicioABorrar(g)}
           onTogglePago={togglePago}
           onCargas={(g) => setCargasPara({ gasto: g })}
           onEditarPlanilla={(p) => setPlanillaModal({ inicial: p })}
@@ -253,7 +245,6 @@ export default function MesPage() {
         <ModalServicio
           abierto
           onCerrar={() => setServicioModal(null)}
-          planillas={planillasDelTipo}
           servicioInicial={servicioModal.inicial}
           planillaIdInicial={servicioModal.planillaId}
           onGuardar={async (input) => {
@@ -292,6 +283,7 @@ export default function MesPage() {
           if (planillaABorrar) {
             try {
               await pl.eliminar(planillaABorrar.id);
+              await recargarGastos();
             } catch (e) {
               setAviso(e instanceof Error ? e.message : 'No se pudo eliminar la planilla.');
             }
@@ -309,34 +301,39 @@ export default function MesPage() {
           titulo={esNuevo(gastoEnEdicion) ? 'Cargar gasto del mes' : 'Editar gasto del mes'}
         >
           <FormularioGasto
-            servicios={serv.servicios}
             gastoInicial={gastoEnEdicion}
             onGuardar={(input) =>
               esNuevo(gastoEnEdicion) ? crear(input) : actualizar(gastoEnEdicion.id, input)
             }
             onExito={() => setGastoEnEdicion(null)}
             onCancelar={() => setGastoEnEdicion(null)}
-            textoGuardar="Guardar cambios"
           />
         </Modal>
       )}
 
-      {/* Eliminar gasto */}
+      {/* Eliminar servicio */}
       <Confirmacion
-        abierto={Boolean(aBorrar)}
-        titulo="Eliminar gasto"
+        abierto={Boolean(servicioABorrar)}
+        titulo="Eliminar servicio"
         peligro
         textoConfirmar="Eliminar"
         mensaje={
           <>
-            ¿Eliminar el gasto de <strong>{aBorrar?.servicios?.nombre}</strong> de este mes?
+            ¿Eliminar el servicio <strong>{servicioABorrar?.servicios?.nombre}</strong>? No va a aparecer en los próximos meses. El historial anterior se conserva.
           </>
         }
         onConfirmar={async () => {
-          if (aBorrar) await eliminar(aBorrar.id);
-          setABorrar(null);
+          if (servicioABorrar) {
+            try {
+              await serv.eliminar(servicioABorrar.servicio_id);
+              await recargarGastos();
+            } catch (e) {
+              setAviso(e instanceof Error ? e.message : 'No se pudo eliminar el servicio.');
+            }
+          }
+          setServicioABorrar(null);
         }}
-        onCancelar={() => setABorrar(null)}
+        onCancelar={() => setServicioABorrar(null)}
       />
 
       {/* Leer factura/documento con IA (OCR) → precarga el formulario para confirmar.
