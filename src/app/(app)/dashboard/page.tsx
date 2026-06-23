@@ -96,7 +96,11 @@ export default function MesPage() {
   // Gastos del mes = los cargados + una fila "reiniciada" por cada servicio activo
   // que todavía no tiene gasto este período (se rearma al cambiar de mes).
   const delMes = useMemo(() => {
-    const existentes = gastos.filter((g) => g.periodo === periodo);
+    const activosIds = new Set(serv.servicios.filter((s) => s.activo).map((s) => s.id));
+    // Solo gastos del mes de servicios activos (los de inactivos quedan en Histórico)
+    const existentes = gastos.filter(
+      (g) => g.periodo === periodo && activosIds.has(g.servicio_id),
+    );
     const conGasto = new Set(existentes.map((g) => g.servicio_id));
     const reiniciados = serv.servicios
       .filter((s) => s.activo && !conGasto.has(s.id))
