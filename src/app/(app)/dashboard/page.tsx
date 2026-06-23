@@ -287,6 +287,7 @@ export default function MesPage() {
           if (planillaABorrar) {
             try {
               await pl.eliminar(planillaABorrar.id);
+              await serv.recargar();
               await recargarGastos();
             } catch (e) {
               setAviso(e instanceof Error ? e.message : 'No se pudo eliminar la planilla.');
