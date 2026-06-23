@@ -95,18 +95,25 @@ export default function MesPage() {
 
   // Gastos del mes = los cargados + una fila "reiniciada" por cada servicio activo
   // que todavía no tiene gasto este período (se rearma al cambiar de mes).
+  // Sólo se incluyen servicios cuya planilla también esté activa: evita que gastos
+  // de planillas inactivas aparezcan en las cards de resumen sin sección visible.
   const delMes = useMemo(() => {
-    const activosIds = new Set(serv.servicios.filter((s) => s.activo).map((s) => s.id));
-    // Solo gastos del mes de servicios activos (los de inactivos quedan en Histórico)
+    const planillaActivaIds = new Set(pl.planillas.map((p) => p.id));
+    const activosIds = new Set(
+      serv.servicios
+        .filter((s) => s.activo && planillaActivaIds.has(s.planilla_id))
+        .map((s) => s.id),
+    );
+    // Solo gastos del mes de servicios activos con planilla activa
     const existentes = gastos.filter(
       (g) => g.periodo === periodo && activosIds.has(g.servicio_id),
     );
     const conGasto = new Set(existentes.map((g) => g.servicio_id));
     const reiniciados = serv.servicios
-      .filter((s) => s.activo && !conGasto.has(s.id))
+      .filter((s) => s.activo && planillaActivaIds.has(s.planilla_id) && !conGasto.has(s.id))
       .map((s) => filaReiniciada(s, periodo));
     return [...existentes, ...reiniciados];
-  }, [gastos, serv.servicios]);
+  }, [gastos, serv.servicios, pl.planillas]);
 
   // Planillas y gastos del tipo activo (egresos o ingresos)
   const planillasDelTipo = useMemo(
