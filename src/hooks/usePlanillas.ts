@@ -50,11 +50,31 @@ export function usePlanillas({ incluirInactivas = false }: { incluirInactivas?: 
       } = await supabase.auth.getSession();
       const user_id = session?.user.id;
       if (!user_id) throw new Error('No hay sesión activa.');
-      const { error } = await supabase.from('planillas').insert({ ...input, user_id });
-      if (error)
-        throw new Error(
-          mensajeError(error, { duplicado: 'Ya existe una planilla con ese nombre.' }),
-        );
+
+      // Si existe una planilla eliminada con el mismo nombre, la reactiva en vez de
+      // insertar una nueva (evita conflicto con el índice único de nombres activos).
+      const { data: eliminada } = await supabase
+        .from('planillas')
+        .select('id')
+        .eq('user_id', user_id)
+        .eq('nombre', input.nombre.trim())
+        .eq('activo', false)
+        .maybeSingle();
+
+      if (eliminada) {
+        const { error } = await supabase
+          .from('planillas')
+          .update({ ...input, activo: true })
+          .eq('id', eliminada.id);
+        if (error) throw new Error(mensajeError(error));
+      } else {
+        const { error } = await supabase.from('planillas').insert({ ...input, user_id });
+        if (error)
+          throw new Error(
+            mensajeError(error, { duplicado: 'Ya existe una planilla con ese nombre.' }),
+          );
+      }
+
       await recargar();
     },
     [supabase, recargar],
