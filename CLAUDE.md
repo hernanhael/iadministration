@@ -47,20 +47,28 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Botones "Guardar" / "Aceptar":** estilo `primary` con borde de color y tint sutil, no sólido.
 - **Inputs de fecha (`type="text"`, `placeholder="dd/mm/aaaa"`):** reemplazaron a `<input type="date">` en `FormularioGasto` para mantener apariencia consistente. Fecha nativa sigue usando `<input type="date">` con `color-scheme: dark` en el resto de la app (ej. `SelectorMes`).
 
-## Estado al 2026-06-22
-**App completamente funcional con backend real.** Fases 1–5 + módulo de ingresos + borrado lógico verificados.
+## Bugs resueltos en producción (2026-06-22)
 
-- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001_init.sql`, `0002_ingresos.sql` corridas. Migración `0003_activo_planillas.sql` pendiente de ejecutar en Supabase SQL Editor antes del primer uso en producción.
-- **Auth:** ✅ registro, login y sesión verificados.
+- **Planillas de egreso no aparecían:** tenían `activo = false` por pruebas locales previas. Fix de datos vía SQL (`UPDATE planillas SET activo = true WHERE activo = false`) + migración `0004` con índice único parcial.
+- **No se podía recrear una planilla con el mismo nombre:** el constraint `unique(user_id, nombre)` bloqueaba la creación aunque la planilla estuviera eliminada. Fix: migración `0004_partial_unique_planillas.sql` reemplaza el constraint por un índice parcial `WHERE activo = true`; `usePlanillas.crear` reactiva la planilla eliminada si existe una con el mismo nombre.
+- **Eliminar servicio con gasto confirmado no lo quitaba del Mes:** `delMes` incluía gastos de servicios inactivos porque no filtraba por `activo`. Fix: `delMes` en `dashboard/page.tsx` ahora construye `activosIds` a partir de `serv.servicios.filter(s => s.activo)` y excluye los demás.
+- **Burbujas de ResumenCards mostraban egreso fantasma al eliminar planilla:** `serv.servicios` no se recargaba tras borrar una planilla, por lo que sus servicios seguían siendo visibles en memoria. Fix: `serv.recargar()` llamado explícitamente después de `pl.eliminar()` en el dashboard.
+
+## Estado al 2026-06-22
+**App completamente funcional en producción (Vercel).** Fases 1–5 + módulo de ingresos + borrado lógico + deploy verificados.
+
+- **Deploy:** ✅ app en Vercel conectada al repo `hernanhael/iadministration`. Variables de entorno cargadas en Vercel. Deploy automático en cada push a `main`.
+- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001` a `0004` aplicadas.
+- **Auth:** ✅ registro, login y sesión verificados en producción. URL de callback configurada en Supabase.
 - **CRUD:** ✅ planillas, servicios y gastos funcionando con datos reales.
 - **Recurrencia:** ✅ `generar_gastos_periodo` genera filas al abrir el Mes.
-- **OCR:** ✅ `POST /api/ocr-factura` con claude-haiku-4-5 funcionando con API key real.
-- **Informe IA:** ✅ `POST /api/informe` con claude-sonnet-4-6 funcionando con API key real.
+- **OCR:** ✅ `POST /api/ocr-factura` con claude-haiku-4-5 funcionando.
+- **Informe IA:** ✅ `POST /api/informe` con claude-sonnet-4-6 funcionando.
 - **Módulo ingresos:** ✅ toggle Ingresos/Egresos en Mes e Histórico; gráficos muestran ambos tipos combinados.
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
 
-**Próximo paso:** ejecutar `0003_activo_planillas.sql` en Supabase y deployar en Vercel (conectar repo de GitHub + cargar variables de entorno en el proyecto de Vercel).
+**Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
 
 El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
