@@ -69,6 +69,7 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
 - **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
+- **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía `scripts/migrate-sheets.ts`. Planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" creadas con sus servicios y 166 gastos históricos. El script lee credenciales desde `.env.local` + variable `MIGRATION_USER_ID`; ya fue ejecutado y no necesita volver a correrse.
 
 **Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
 
