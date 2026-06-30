@@ -53,8 +53,9 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **No se podía recrear una planilla con el mismo nombre:** el constraint `unique(user_id, nombre)` bloqueaba la creación aunque la planilla estuviera eliminada. Fix: migración `0004_partial_unique_planillas.sql` reemplaza el constraint por un índice parcial `WHERE activo = true`; `usePlanillas.crear` reactiva la planilla eliminada si existe una con el mismo nombre.
 - **Eliminar servicio con gasto confirmado no lo quitaba del Mes:** `delMes` incluía gastos de servicios inactivos porque no filtraba por `activo`. Fix: `delMes` en `dashboard/page.tsx` ahora construye `activosIds` a partir de `serv.servicios.filter(s => s.activo)` y excluye los demás.
 - **Burbujas de ResumenCards mostraban egreso fantasma al eliminar planilla:** `serv.servicios` no se recargaba tras borrar una planilla, por lo que sus servicios seguían siendo visibles en memoria. Fix: `serv.recargar()` llamado explícitamente después de `pl.eliminar()` en el dashboard.
+- **ResumenCards incluía gastos de planillas inactivas:** `delMes` filtraba servicios inactivos pero no cruzaba contra planillas activas; gastos de planillas eliminadas aparecían en las cards sin sección visible debajo. Fix: `delMes` en `dashboard/page.tsx` construye `plActivas` (set de `planilla_id` de planillas con `activo = true`) y excluye gastos cuyo `planilla_id` no esté en ese set.
 
-## Estado al 2026-06-22
+## Estado al 2026-06-30
 **App completamente funcional en producción (Vercel).** Fases 1–5 + módulo de ingresos + borrado lógico + deploy verificados.
 
 - **Deploy:** ✅ app en Vercel conectada al repo `hernanhael/iadministration`. Variables de entorno cargadas en Vercel. Deploy automático en cada push a `main`.
@@ -67,6 +68,7 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Módulo ingresos:** ✅ toggle Ingresos/Egresos en Mes e Histórico; gráficos muestran ambos tipos combinados.
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
+- **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
 
 **Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
 
