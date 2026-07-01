@@ -261,6 +261,9 @@ export default function MesPage() {
           onGuardar={async (input) => {
             if (servicioModal.inicial) await serv.actualizar(servicioModal.inicial.id, input);
             else await serv.crear(input);
+            // Los gastos del mes traen el servicio embebido (nombre, color, etc.):
+            // hay que refrescarlos para que el cambio se vea sin recargar la página.
+            await recargarGastos();
           }}
         />
       )}
