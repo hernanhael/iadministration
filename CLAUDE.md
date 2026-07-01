@@ -69,12 +69,21 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Módulo ingresos:** ✅ toggle Ingresos/Egresos en Mes e Histórico; gráficos muestran ambos tipos combinados.
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
-- **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
+- **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER_EMAIL`, `CRON_USER_ID`, `CRON_SECRET`).
+- **Cron de importación por Gmail:** ⏳ código listo (`GET /api/cron/gmail-facturas`), pendiente de setup manual (proyecto Google Cloud + OAuth + migración `0006` + carga de variables) antes de activarse en producción. No requiere configurar nada por servicio: el matching es por IA contra `empresa`/`nombre`.
 - **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía dos scripts de migración. Ambos ya fueron ejecutados y no necesitan volver a correrse. Leen credenciales desde `.env.local` + variable `MIGRATION_USER_ID`.
   - `scripts/migrate-sheets.ts`: planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" con sus servicios y 166 gastos históricos (2024-05 → 2026-06).
   - `scripts/migrate-personal.ts`: planilla "Personal" (egreso, 14 servicios) y "Ingresos Mensuales" (ingreso, 5 servicios) con 216 egresos (2024-08 → 2026-06) y 17 ingresos (2026-01 → 2026-06). Excluye "Cochera del Departamento" y "Departamento" de los egresos. Servicios inactivos: Apple Cloud 2, Keepa, ML Nivel 6, SanCor.
 
-**Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
+**Próximo paso — activar el cron de importación por Gmail (código ya en `main`, falta el setup manual):**
+1. Google Cloud: crear/seleccionar proyecto, habilitar Gmail API, pantalla de consentimiento OAuth (tipo External, usuario `hernanhael@gmail.com`, **Publishing status = "In production"** — no "Testing", o el refresh token expira a los 7 días), credencial OAuth **Desktop app** → `client_id`/`client_secret`.
+2. Correr una vez: `GMAIL_CLIENT_ID=... GMAIL_CLIENT_SECRET=... npx tsx scripts/gmail-auth.ts` → guarda el `GMAIL_REFRESH_TOKEN` que imprime.
+3. Aplicar `supabase/migrations/0006_gmail_auto_import.sql` en el SQL Editor de Supabase (proyecto `mramvepdcosmylxeaden`) — mismo mecanismo manual usado para `0005`.
+4. Cargar en Vercel (Project Settings → Environment Variables) y en `.env.local`: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER_EMAIL`, `CRON_USER_ID` (mismo valor que `MIGRATION_USER_ID`), `CRON_SECRET` (generar con `openssl rand -base64 32`).
+5. Probar local antes de confiar en el cron real: `npm run dev` + `curl -i http://localhost:3000/api/cron/gmail-facturas -H "Authorization: Bearer $CRON_SECRET"`, revisar la respuesta y los `gastos`/`gmail_procesados` en Supabase.
+6. Deploy y confirmar en el dashboard de Vercel (Cron Jobs) que el primer disparo real devuelve 200.
+
+Una vez activo, próximo paso general: uso real y feedback del usuario.
 
 El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
@@ -82,6 +91,7 @@ El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
 **Seguridad**
 - `ANTHROPIC_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY` solo en código de servidor (API routes). Nunca en componentes ni hooks del cliente.
+- `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` y `CRON_SECRET` solo se usan en `src/lib/gmail.ts` y `src/app/api/cron/gmail-facturas/route.ts`; nunca en cliente.
 - Toda tabla nueva lleva `user_id` y política RLS antes del primer insert.
 - Las facturas/documentación **no se almacenan**: el OCR lee la foto en memoria para extraer monto/vencimiento y la imagen se descarta (no hay bucket de Storage ni columna `factura_img`).
 
@@ -100,7 +110,8 @@ El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 **UI**
 - Idioma: español en toda la interfaz, mensajes de error y validaciones.
 - Tipografía: Nunito para texto; `font-variant-numeric: tabular-nums` en todos los montos.
-- Las filas pagadas se muestran atenuadas (`opacity: 0.6`), no se ocultan.
+- Filas atenuadas (`opacity: 0.6`, no se ocultan): pagadas, o sin cargar todavía (fila "reiniciada" sin monto confirmado, o acumulable sin cargas). Solo las pendientes con monto ya cargado quedan iluminadas (`flags().sinCargar` en `GrillaGastos.tsx`).
+- La columna "Pago" de `GrillaGastos` se llama "Cobro" en las planillas de ingreso (misma condición `sinVencimiento`).
 - Los botones de cámara (foto) y documento (adjuntar imagen/PDF) son visibles en cada fila, no están escondidos en un menú. El archivo se usa solo para el OCR y no se guarda.
 
 ## Comandos

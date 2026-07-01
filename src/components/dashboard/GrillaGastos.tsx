@@ -52,7 +52,10 @@ function flags(g: GastoConServicio) {
   const pagado = g.estado === 'pagado';
   // Pagado fuera de término: la fecha de pago es posterior al vencimiento.
   const pagadoTarde = pagado && Boolean(g.vencimiento && g.fecha_pago && g.fecha_pago > g.vencimiento);
-  return { vencido, pagado, pagadoTarde };
+  // Sin cargar: todavía no se confirmó un monto (fila "reiniciada" del mes) o,
+  // si es acumulable, no tiene ninguna carga todavía.
+  const sinCargar = g.servicios?.acumulable ? (g.cargas?.length ?? 0) === 0 : g.monto == null;
+  return { vencido, pagado, pagadoTarde, sinCargar };
 }
 
 export function GrillaGastos({
@@ -279,7 +282,7 @@ export function GrillaGastos({
           <span>Servicio</span>
           <span>Monto</span>
           {!sinVencimiento && <span>Vencimiento</span>}
-          <span>Pago</span>
+          <span>{sinVencimiento ? 'Cobro' : 'Pago'}</span>
           {!soloLectura && <span className="text-right">Acciones</span>}
         </div>
 
@@ -289,12 +292,14 @@ export function GrillaGastos({
 
         {gastos.map((g) => {
           const f = flags(g);
-          // Filas pagadas atenuadas. En Histórico (solo lectura) se atenúa la fila
-          // entera; en el Mes se deja el Pago (verde/rojo) a opacidad plena para que
-          // el color no se vea grisáceo.
-          const dim = f.pagado ? 'opacity-60' : '';
-          const filaDim = soloLectura ? dim : '';
-          const celdaDim = soloLectura ? '' : dim;
+          // Iluminadas solo las pendientes con monto ya cargado. El resto
+          // (pagadas, o sin monto todavía) queda atenuado. En Histórico (solo
+          // lectura) se atenúa la fila entera; en el Mes, si está pagada se
+          // deja el Pago (verde/rojo) a opacidad plena para que el color no
+          // se vea grisáceo.
+          const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
+          const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
+          const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
           return (
             <div
               key={g.id}
@@ -318,9 +323,9 @@ export function GrillaGastos({
 
         {gastos.map((g) => {
           const f = flags(g);
-          const dim = f.pagado ? 'opacity-60' : '';
-          const filaDim = soloLectura ? dim : '';
-          const celdaDim = soloLectura ? '' : dim;
+          const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
+          const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
+          const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
           return (
             <div key={g.id} className={`border-b border-border px-4 py-3 last:border-0 ${filaDim}`}>
               <div className={`flex items-start justify-between gap-3 ${celdaDim}`}>
@@ -336,7 +341,9 @@ export function GrillaGastos({
                   </div>
                 )}
                 <div className={sinVencimiento ? 'w-full' : 'text-right'}>
-                  <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">Pago</span>
+                  <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                    {sinVencimiento ? 'Cobro' : 'Pago'}
+                  </span>
                   <div className={sinVencimiento ? '' : 'flex justify-end'}>{Pago(g, f)}</div>
                 </div>
               </div>
