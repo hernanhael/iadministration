@@ -12,7 +12,7 @@ import {
 import { PuntoColor } from '@/components/ui/Badge';
 import { IconButton, IconLinkButton, clasesIconButton } from '@/components/ui/IconButton';
 import { MenuAcciones } from '@/components/ui/MenuAcciones';
-import { IconCamara, IconCheck, IconDoc, IconLink, IconMas } from '@/components/ui/icons';
+import { IconCamara, IconCheck, IconDoc, IconLink, IconMail, IconMas } from '@/components/ui/icons';
 
 interface Props {
   gastos: GastoConServicio[];
@@ -84,6 +84,11 @@ export function GrillaGastos({
         <div className="flex items-center gap-2">
           {g.servicios && <PuntoColor color={g.servicios.color} />}
           <span className="truncate text-sm font-semibold">{g.servicios?.nombre ?? '—'}</span>
+          {g.origen_email && (
+            <span title="Cargado automáticamente desde un correo" className="shrink-0 text-muted">
+              <IconMail size={14} />
+            </span>
+          )}
         </div>
         {sub && <div className="mt-0.5 truncate text-xs text-muted">{sub}</div>}
       </div>

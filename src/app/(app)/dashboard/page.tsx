@@ -42,6 +42,7 @@ function filaReiniciada(s: ServicioConPlanilla, per: string): GastoConServicio {
     fecha_pago: null,
     estado: 'pendiente',
     monto_confirmado: false,
+    origen_email: false,
     observacion: null,
     cargas: [],
     created_at: '',

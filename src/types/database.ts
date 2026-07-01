@@ -85,6 +85,9 @@ export interface Database {
           // Cargas individuales para servicios acumulables (ej. nafta). Para los
           // servicios normales queda como arreglo vacío.
           cargas: Carga[];
+          // true cuando el cron de Gmail lo cargó automáticamente, sin
+          // confirmación del usuario (ver CLAUDE.md, excepción de IA).
+          origen_email: boolean;
           created_at: string;
         };
         Insert: {
@@ -99,9 +102,46 @@ export interface Database {
           monto_confirmado?: boolean;
           observacion?: string | null;
           cargas?: Carga[];
+          origen_email?: boolean;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['gastos']['Insert']>;
+        Relationships: [];
+      };
+      gmail_procesados: {
+        Row: {
+          id: string;
+          user_id: string;
+          gmail_message_id: string;
+          gmail_thread_id: string | null;
+          remitente: string | null;
+          asunto: string | null;
+          fecha_recibido: string | null;
+          resultado: 'aplicado' | 'sin_match' | 'sin_monto' | 'ya_confirmado' | 'error';
+          servicio_id: string | null;
+          gasto_id: string | null;
+          monto_detectado: number | null;
+          vencimiento_detectado: string | null;
+          detalle: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          gmail_message_id: string;
+          gmail_thread_id?: string | null;
+          remitente?: string | null;
+          asunto?: string | null;
+          fecha_recibido?: string | null;
+          resultado: 'aplicado' | 'sin_match' | 'sin_monto' | 'ya_confirmado' | 'error';
+          servicio_id?: string | null;
+          gasto_id?: string | null;
+          monto_detectado?: number | null;
+          vencimiento_detectado?: string | null;
+          detalle?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['gmail_procesados']['Insert']>;
         Relationships: [];
       };
     };

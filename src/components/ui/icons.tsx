@@ -115,6 +115,16 @@ export function IconLapiz({ className, size }: IconProps) {
   );
 }
 
+/** Sobre (gasto cargado automáticamente por el cron de Gmail). */
+export function IconMail({ className, size }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} aria-hidden>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </svg>
+  );
+}
+
 export function IconBasura({ className, size }: IconProps) {
   return (
     <svg {...base(size)} className={className} aria-hidden>
