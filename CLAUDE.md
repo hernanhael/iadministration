@@ -110,7 +110,8 @@ El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 **UI**
 - Idioma: español en toda la interfaz, mensajes de error y validaciones.
 - Tipografía: Nunito para texto; `font-variant-numeric: tabular-nums` en todos los montos.
-- Filas atenuadas (`opacity: 0.6`, no se ocultan): pagadas, o sin cargar todavía (fila "reiniciada" sin monto confirmado, o acumulable sin cargas). Las pendientes con monto/vencimiento ya cargados quedan a opacidad plena (`flags().sinCargar` en `GrillaGastos.tsx`).
+- Filas atenuadas (`opacity: 0.6`, no se ocultan): pagadas, o sin cargar todavía (fila "reiniciada" sin monto confirmado, o acumulable sin cargas). Solo las pendientes con monto ya cargado quedan iluminadas (`flags().sinCargar` en `GrillaGastos.tsx`).
+- La columna "Pago" de `GrillaGastos` se llama "Cobro" en las planillas de ingreso (misma condición `sinVencimiento`).
 - Los botones de cámara (foto) y documento (adjuntar imagen/PDF) son visibles en cada fila, no están escondidos en un menú. El archivo se usa solo para el OCR y no se guarda.
 
 ## Comandos

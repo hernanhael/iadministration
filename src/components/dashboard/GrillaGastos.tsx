@@ -277,7 +277,7 @@ export function GrillaGastos({
           <span>Servicio</span>
           <span>Monto</span>
           {!sinVencimiento && <span>Vencimiento</span>}
-          <span>Pago</span>
+          <span>{sinVencimiento ? 'Cobro' : 'Pago'}</span>
           {!soloLectura && <span className="text-right">Acciones</span>}
         </div>
 
@@ -287,11 +287,11 @@ export function GrillaGastos({
 
         {gastos.map((g) => {
           const f = flags(g);
-          // Atenuadas: pagadas o sin cargar (fila "reiniciada", nada confirmado
-          // todavía). En Histórico (solo lectura) se atenúa la fila entera; en el
-          // Mes, si está pagada se deja el Pago (verde/rojo) a opacidad plena para
-          // que el color no se vea grisáceo, pero sin cargar sí atenúa la fila
-          // completa (no hay nada "iluminado" que resaltar todavía).
+          // Iluminadas solo las pendientes con monto ya cargado. El resto
+          // (pagadas, o sin monto todavía) queda atenuado. En Histórico (solo
+          // lectura) se atenúa la fila entera; en el Mes, si está pagada se
+          // deja el Pago (verde/rojo) a opacidad plena para que el color no
+          // se vea grisáceo.
           const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
           const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
           const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
@@ -336,7 +336,9 @@ export function GrillaGastos({
                   </div>
                 )}
                 <div className={sinVencimiento ? 'w-full' : 'text-right'}>
-                  <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">Pago</span>
+                  <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                    {sinVencimiento ? 'Cobro' : 'Pago'}
+                  </span>
                   <div className={sinVencimiento ? '' : 'flex justify-end'}>{Pago(g, f)}</div>
                 </div>
               </div>
