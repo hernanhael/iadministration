@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/facturas-gmail", "schedule": "0 11 * * *" }
+  ]
+}

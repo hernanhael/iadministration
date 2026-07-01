@@ -47,6 +47,10 @@ export interface Database {
           empresa: string | null;
           nro_cliente: string | null;
           url_pago: string | null;
+          // Dirección de correo del proveedor: el cron de facturas por email
+          // (src/app/api/cron/facturas-gmail) busca mensajes de esta dirección
+          // para precargar monto/vencimiento automáticamente.
+          email_remitente: string | null;
           dia_vencimiento: number | null;
           color: string;
           activo: boolean;
@@ -61,6 +65,7 @@ export interface Database {
           empresa?: string | null;
           nro_cliente?: string | null;
           url_pago?: string | null;
+          email_remitente?: string | null;
           dia_vencimiento?: number | null;
           color?: string;
           activo?: boolean;
@@ -102,6 +107,25 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['gastos']['Insert']>;
+        Relationships: [];
+      };
+      // Registro de mensajes de Gmail ya procesados por el cron de facturas,
+      // para no reprocesarlos (ni volver a cobrar la llamada a la IA) en cada
+      // corrida diaria. Solo se accede vía service role (sin RLS policies).
+      emails_procesados: {
+        Row: {
+          id: string;
+          gmail_message_id: string;
+          servicio_id: string | null;
+          procesado_en: string;
+        };
+        Insert: {
+          id?: string;
+          gmail_message_id: string;
+          servicio_id?: string | null;
+          procesado_en?: string;
+        };
+        Update: Partial<Database['public']['Tables']['emails_procesados']['Insert']>;
         Relationships: [];
       };
     };

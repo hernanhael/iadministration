@@ -15,6 +15,9 @@ export interface ServicioInput {
   empresa: string | null;
   nro_cliente: string | null;
   url_pago: string | null;
+  /** Remitente de las facturas de este proveedor: el cron de facturas por
+   *  email (src/app/api/cron/facturas-gmail) lo usa para precargar el gasto. */
+  email_remitente: string | null;
   dia_vencimiento: number | null;
   color: string;
   activo: boolean;

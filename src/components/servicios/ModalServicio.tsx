@@ -23,6 +23,7 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
   const [nombre, setNombre] = useState(servicioInicial?.nombre ?? '');
   const [empresa, setEmpresa] = useState(servicioInicial?.empresa ?? '');
   const [nroCliente, setNroCliente] = useState(servicioInicial?.nro_cliente ?? '');
+  const [emailRemitente, setEmailRemitente] = useState(servicioInicial?.email_remitente ?? '');
   const [diaVenc, setDiaVenc] = useState(
     servicioInicial?.dia_vencimiento != null ? String(servicioInicial.dia_vencimiento) : '',
   );
@@ -49,6 +50,7 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
         nombre: nombre.trim(),
         empresa: empresa.trim() || null,
         nro_cliente: nroCliente.trim() || null,
+        email_remitente: emailRemitente.trim() || null,
         planilla_id: planillaId,
         dia_vencimiento: dia,
         url_pago: urlPago.trim() || null,
@@ -87,6 +89,17 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
             value={nroCliente}
             onChange={(e) => setNroCliente(e.target.value)}
             placeholder="3712458-001"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="emailremitente">Email del proveedor (precarga automática)</Label>
+          <Input
+            id="emailremitente"
+            type="email"
+            value={emailRemitente}
+            onChange={(e) => setEmailRemitente(e.target.value)}
+            placeholder="facturas@edetsa.com"
           />
         </div>
 

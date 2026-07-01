@@ -37,6 +37,7 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Módulo de Ingresos (2026-06-19):** toggle **Ingresos | Egresos** (`TabTipo`) en Mes e Histórico, inline a la derecha del `<h1>` de cada página (`flex items-center justify-between`). Orden de tabs: Ingresos primero (alfabético). En **Gráficos e Informes no hay switch**: muestra egresos e ingresos combinados. Campo `planillas.tipo: 'egreso' | 'ingreso'`; migración `0002_ingresos.sql`. Las planillas de ingreso no muestran columna Vencimiento (`sinVencimiento` en `GrillaGastos`) y tienen los totales del pie en verde (`colorPie='success'`). `ModalPlanilla` tiene selector de tipo **solo al crear** (no al editar). Datos demo: planilla "Trabajo", servicios Sueldo + Freelance (acumulable), 5 gastos en 3 meses.
 - **Borrado lógico de servicios y planillas (2026-06-22):** `servicios.activo` y `planillas.activo` (migración `0003_activo_planillas.sql`). Al eliminar un servicio: se borra el gasto no confirmado del mes actual + `activo = false`. Al eliminar una planilla: se desactivan sus servicios + gastos no confirmados del mes + `activo = false`. Ambos se omiten en meses futuros (`generar_gastos_periodo`) pero sus gastos históricos siguen visibles en Histórico (`incluirInactivas: true` en `usePlanillas`). Nunca se elimina físicamente nada que tenga historial.
 - **Modo vista previa** (`src/lib/preview.ts`): sin credenciales de Supabase, la app levanta con datos demo (`DEMO_PLANILLAS` / `DEMO_SERVICIOS` / `DEMO_GASTOS`) y las mutaciones avisan en vez de persistir. Se apaga solo al completar `.env.local`.
+- **Precarga automática de facturas por email (2026-06-30, pendiente de setup manual en Google Cloud):** cron diario de Vercel (`vercel.json`, `GET /api/cron/facturas-gmail`) que revisa Gmail buscando correos de proveedores configurados por servicio (`servicios.email_remitente`), les extrae el adjunto y precarga monto/vencimiento con el mismo pipeline de OCR que la cámara/documento (`src/lib/ocr/extraerFactura.ts`, compartido con `/api/ocr-factura`). **Excepción deliberada** a la regla de confirmación manual (ver sección IA más abajo): estas cargas quedan con `monto_confirmado = true` desde el inicio, sin paso de aprobación — decisión explícita del usuario para este flujo, distinta de cámara/documento. Anti-duplicados vía tabla `emails_procesados` (no etiquetas de Gmail, así el OAuth solo pide `gmail.readonly`). Cuando un remitente factura más de un servicio (ej. SAT SA: "Agua" de dos inmuebles distintos), el servicio destino se determina cruzando el número de cliente/cuenta/padrón que el OCR extrae de la propia factura (`Factura.numero_cliente`) contra `servicios.nro_cliente` — si no hay match único, no se carga nada y queda para cargar a mano. Setup: `scripts/obtener-refresh-token-gmail.ts` (una sola vez, credencial OAuth "Desktop app"), migración `0006_email_remitente_emails_procesados.sql`, variables `GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN` + `CRON_SECRET`.
 
 ## Decisiones de UI/UX (2026-06-22)
 
@@ -68,12 +69,22 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Módulo ingresos:** ✅ toggle Ingresos/Egresos en Mes e Histórico; gráficos muestran ambos tipos combinados.
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
-- **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
+- **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `CRON_SECRET`).
+- **Cron de facturas por email:** ⏳ código listo, pendiente de setup manual (proyecto Google Cloud + OAuth + migración `0006` + carga de `email_remitente` en los 4 servicios) antes de activarse en producción.
 - **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía dos scripts de migración. Ambos ya fueron ejecutados y no necesitan volver a correrse. Leen credenciales desde `.env.local` + variable `MIGRATION_USER_ID`.
   - `scripts/migrate-sheets.ts`: planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" con sus servicios y 166 gastos históricos (2024-05 → 2026-06).
   - `scripts/migrate-personal.ts`: planilla "Personal" (egreso, 14 servicios) y "Ingresos Mensuales" (ingreso, 5 servicios) con 216 egresos (2024-08 → 2026-06) y 17 ingresos (2026-01 → 2026-06). Excluye "Cochera del Departamento" y "Departamento" de los egresos. Servicios inactivos: Apple Cloud 2, Keepa, ML Nivel 6, SanCor.
 
-**Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
+**Próximo paso — activar el cron de facturas por email (código ya en `main`, falta el setup manual):**
+1. Google Cloud: crear/seleccionar proyecto, habilitar Gmail API, pantalla de consentimiento OAuth (tipo External, usuario `hernanhael@gmail.com`, **Publishing status = "In production"** — no "Testing", o el refresh token expira a los 7 días), credencial OAuth **Desktop app** → `client_id`/`client_secret`.
+2. Correr una vez: `GMAIL_CLIENT_ID=... GMAIL_CLIENT_SECRET=... npx tsx scripts/obtener-refresh-token-gmail.ts` → guarda el `GMAIL_REFRESH_TOKEN` que imprime.
+3. Aplicar `supabase/migrations/0006_email_remitente_emails_procesados.sql` en el SQL Editor de Supabase (proyecto `mramvepdcosmylxeaden`) — mismo mecanismo manual usado para `0005`.
+4. Cargar en Vercel (Project Settings → Environment Variables) y en `.env.local`: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `CRON_SECRET` (generar con `openssl rand -base64 32`).
+5. Desde el candado de cada servicio en el Mes, cargar `email_remitente` (y confirmar `nro_cliente`) para los 4 proveedores: Claro SA, Naturgy, Edet SA, SAT SA. **SAT SA factura dos servicios "Agua" distintos** (Inmueble `nro_cliente 16847638` y Cochera `nro_cliente 16847621`) — el matcheo entre ambos depende de que el `nro_cliente` esté cargado correctamente en cada uno.
+6. Probar local antes de confiar en el cron real: `npm run dev` + `curl -i http://localhost:3000/api/cron/facturas-gmail -H "Authorization: Bearer $CRON_SECRET"`, revisar la respuesta y los `gastos`/`emails_procesados` en Supabase.
+7. Deploy y confirmar en el dashboard de Vercel (Cron Jobs) que el primer disparo real devuelve 200.
+
+Una vez activo, próximo paso general: uso real y feedback del usuario.
 
 El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
@@ -81,7 +92,8 @@ El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
 **Seguridad**
 - `ANTHROPIC_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY` solo en código de servidor (API routes). Nunca en componentes ni hooks del cliente.
-- Toda tabla nueva lleva `user_id` y política RLS antes del primer insert.
+- `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` y `CRON_SECRET` solo se usan en `src/lib/gmail.ts` y `src/app/api/cron/facturas-gmail/route.ts`; nunca en cliente.
+- Toda tabla nueva lleva `user_id` y política RLS antes del primer insert (excepción: `emails_procesados`, de uso interno del cron, con RLS habilitado y sin políticas — solo accesible vía service role).
 - Las facturas/documentación **no se almacenan**: el OCR lee la foto en memoria para extraer monto/vencimiento y la imagen se descarta (no hay bucket de Storage ni columna `factura_img`).
 
 **Modelo de datos**
@@ -91,14 +103,14 @@ El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 - Período siempre en formato `YYYY-MM`.
 
 **IA**
-- El gasto nunca se guarda automáticamente desde el OCR: requiere confirmación explícita del usuario.
-- Los endpoints `/api/ocr-factura` y `/api/informe` validan la sesión antes de llamar a la API de Anthropic.
+- El gasto nunca se guarda automáticamente desde el OCR interactivo (cámara/documento): requiere confirmación explícita del usuario. **Única excepción:** el cron de facturas por email (`/api/cron/facturas-gmail`) sí guarda confirmado (`monto_confirmado = true`) sin paso manual — decisión explícita del usuario para ese flujo puntual, con los proveedores que él mismo configura por servicio.
+- Los endpoints `/api/ocr-factura` y `/api/informe` validan la sesión antes de llamar a la API de Anthropic. El cron de facturas, al no tener sesión de usuario, valida en cambio el secreto `CRON_SECRET`.
 - Al informe se le envían solo los agregados numéricos, nunca las imágenes ni datos personales.
 
 **UI**
 - Idioma: español en toda la interfaz, mensajes de error y validaciones.
 - Tipografía: Nunito para texto; `font-variant-numeric: tabular-nums` en todos los montos.
-- Las filas pagadas se muestran atenuadas (`opacity: 0.6`), no se ocultan.
+- Filas atenuadas (`opacity: 0.6`, no se ocultan): pagadas, o sin cargar todavía (fila "reiniciada" sin monto confirmado, o acumulable sin cargas). Las pendientes con monto/vencimiento ya cargados quedan a opacidad plena (`flags().sinCargar` en `GrillaGastos.tsx`).
 - Los botones de cámara (foto) y documento (adjuntar imagen/PDF) son visibles en cada fila, no están escondidos en un menú. El archivo se usa solo para el OCR y no se guarda.
 
 ## Comandos

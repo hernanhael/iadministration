@@ -52,7 +52,10 @@ function flags(g: GastoConServicio) {
   const pagado = g.estado === 'pagado';
   // Pagado fuera de término: la fecha de pago es posterior al vencimiento.
   const pagadoTarde = pagado && Boolean(g.vencimiento && g.fecha_pago && g.fecha_pago > g.vencimiento);
-  return { vencido, pagado, pagadoTarde };
+  // Sin cargar: todavía no se confirmó un monto (fila "reiniciada" del mes) o,
+  // si es acumulable, no tiene ninguna carga todavía.
+  const sinCargar = g.servicios?.acumulable ? (g.cargas?.length ?? 0) === 0 : g.monto == null;
+  return { vencido, pagado, pagadoTarde, sinCargar };
 }
 
 export function GrillaGastos({
@@ -284,12 +287,14 @@ export function GrillaGastos({
 
         {gastos.map((g) => {
           const f = flags(g);
-          // Filas pagadas atenuadas. En Histórico (solo lectura) se atenúa la fila
-          // entera; en el Mes se deja el Pago (verde/rojo) a opacidad plena para que
-          // el color no se vea grisáceo.
-          const dim = f.pagado ? 'opacity-60' : '';
-          const filaDim = soloLectura ? dim : '';
-          const celdaDim = soloLectura ? '' : dim;
+          // Atenuadas: pagadas o sin cargar (fila "reiniciada", nada confirmado
+          // todavía). En Histórico (solo lectura) se atenúa la fila entera; en el
+          // Mes, si está pagada se deja el Pago (verde/rojo) a opacidad plena para
+          // que el color no se vea grisáceo, pero sin cargar sí atenúa la fila
+          // completa (no hay nada "iluminado" que resaltar todavía).
+          const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
+          const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
+          const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
           return (
             <div
               key={g.id}
@@ -313,9 +318,9 @@ export function GrillaGastos({
 
         {gastos.map((g) => {
           const f = flags(g);
-          const dim = f.pagado ? 'opacity-60' : '';
-          const filaDim = soloLectura ? dim : '';
-          const celdaDim = soloLectura ? '' : dim;
+          const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
+          const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
+          const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
           return (
             <div key={g.id} className={`border-b border-border px-4 py-3 last:border-0 ${filaDim}`}>
               <div className={`flex items-start justify-between gap-3 ${celdaDim}`}>
