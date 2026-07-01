@@ -69,7 +69,9 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
 - **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`).
-- **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía `scripts/migrate-sheets.ts`. Planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" creadas con sus servicios y 166 gastos históricos. El script lee credenciales desde `.env.local` + variable `MIGRATION_USER_ID`; ya fue ejecutado y no necesita volver a correrse.
+- **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía dos scripts de migración. Ambos ya fueron ejecutados y no necesitan volver a correrse. Leen credenciales desde `.env.local` + variable `MIGRATION_USER_ID`.
+  - `scripts/migrate-sheets.ts`: planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" con sus servicios y 166 gastos históricos (2024-05 → 2026-06).
+  - `scripts/migrate-personal.ts`: planilla "Personal" (egreso, 14 servicios) y "Ingresos Mensuales" (ingreso, 5 servicios) con 216 egresos (2024-08 → 2026-06) y 17 ingresos (2026-01 → 2026-06). Excluye "Cochera del Departamento" y "Departamento" de los egresos. Servicios inactivos: Apple Cloud 2, Keepa, ML Nivel 6, SanCor.
 
 **Próximo paso:** uso real y feedback del usuario. Todas las migraciones están aplicadas y el deploy está activo.
 
