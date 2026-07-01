@@ -38,7 +38,7 @@ async function simular(): Promise<DatosFactura> {
   };
 }
 
-export async function leerFactura(file: File): Promise<DatosFactura> {
+export async function leerFactura(file: File, instrucciones?: string): Promise<DatosFactura> {
   if (!MIME_VALIDOS.includes(file.type)) {
     throw new Error('Formato no soportado. Usá una imagen (JPG, PNG, WEBP) o un PDF.');
   }
@@ -52,7 +52,7 @@ export async function leerFactura(file: File): Promise<DatosFactura> {
   const res = await fetch('/api/ocr-factura', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imagen, mime: file.type }),
+    body: JSON.stringify({ imagen, mime: file.type, instrucciones }),
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {

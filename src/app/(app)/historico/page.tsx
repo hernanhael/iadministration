@@ -7,7 +7,7 @@ import { PlanillasPeriodo } from '@/components/dashboard/PlanillasPeriodo';
 import { TabTipo } from '@/components/ui/TabTipo';
 import { SelectorMes } from '@/components/ui/SelectorMes';
 import { IconChevron } from '@/components/ui/icons';
-import { formatearMonto, periodoActual, sumarMeses } from '@/lib/formateo';
+import { formatearMonto, periodoActual, sumarMeses, tuvoMovimiento } from '@/lib/formateo';
 
 const actual = periodoActual();
 
@@ -27,7 +27,9 @@ export default function HistoricoPage() {
   const periodos = useMemo(() => {
     const set = new Set<string>();
     for (const g of gastos) {
-      if (g.periodo < actual && g.servicios?.planillas?.tipo === tipo) set.add(g.periodo);
+      if (g.periodo < actual && g.servicios?.planillas?.tipo === tipo && tuvoMovimiento(g)) {
+        set.add(g.periodo);
+      }
     }
     return [...set].sort().reverse();
   }, [gastos, tipo]);
@@ -112,7 +114,7 @@ export default function HistoricoPage() {
             </div>
           </div>
 
-          {delPeriodo.length === 0 ? (
+          {!delPeriodo.some(tuvoMovimiento) ? (
             <p className="rounded-2xl border border-dashed border-border bg-surface p-10 text-center text-sm text-muted">
               {tipo === 'egreso'
                 ? 'No hubo gastos registrados en este mes.'

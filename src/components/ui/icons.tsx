@@ -42,6 +42,24 @@ export function IconDoc({ className, size }: IconProps) {
   );
 }
 
+/** Cámara (chica, arriba a la izquierda) + documento (chico, abajo a la derecha),
+ *  separados por una barra diagonal: un solo botón para las dos entradas al OCR. */
+export function IconCamaraDoc({ className, size }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} aria-hidden>
+      <g transform="translate(-1.8 -3.2) scale(0.58)">
+        <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z" />
+        <circle cx="12" cy="13" r="3.2" />
+      </g>
+      <path d="M9.8 14.2l3.6-3.6" />
+      <g transform="translate(13 11.8) scale(0.58)">
+        <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+        <path d="M14 3v4h4" />
+      </g>
+    </svg>
+  );
+}
+
 export function IconPuntos({ className, size }: IconProps) {
   return (
     <svg {...base(size)} className={className} aria-hidden>

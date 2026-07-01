@@ -82,11 +82,7 @@ export default function MesPage() {
   const [planillaModal, setPlanillaModal] = useState<{ inicial: Planilla | null } | null>(null);
   const [planillaABorrar, setPlanillaABorrar] = useState<Planilla | null>(null);
   const [gastoEnEdicion, setGastoEnEdicion] = useState<GastoConServicio | null>(null);
-  const [ocrPara, setOcrPara] = useState<{
-    gasto: GastoConServicio;
-    modo: 'foto' | 'documento';
-    archivo?: File;
-  } | null>(null);
+  const [ocrPara, setOcrPara] = useState<{ gasto: GastoConServicio; archivo: File } | null>(null);
   const [servicioABorrar, setServicioABorrar] = useState<GastoConServicio | null>(null);
   const [cargasPara, setCargasPara] = useState<{
     gasto: GastoConServicio;
@@ -239,8 +235,7 @@ export default function MesPage() {
         <PlanillasPeriodo
           gastos={gastosDelTipo}
           planillas={planillasDelTipo}
-          onFoto={(g, archivo) => setOcrPara({ gasto: g, modo: 'foto', archivo })}
-          onDoc={(g) => setOcrPara({ gasto: g, modo: 'documento' })}
+          onArchivo={(g, archivo) => setOcrPara({ gasto: g, archivo })}
           onEditarServicio={editarServicio}
           onEditarGasto={(g) => setGastoEnEdicion(g)}
           onEliminarServicio={(g) => setServicioABorrar(g)}
@@ -357,7 +352,6 @@ export default function MesPage() {
       {ocrPara && (
         <ModalOcr
           abierto
-          modo={ocrPara.modo}
           servicioNombre={ocrPara.gasto.servicios?.nombre ?? 'gasto'}
           archivoInicial={ocrPara.archivo}
           onCerrar={() => setOcrPara(null)}

@@ -7,12 +7,13 @@ import {
   formatearFechaCorta,
   formatearMonto,
   sumarCargas,
+  tuvoMovimiento,
   ultimaFechaCarga,
 } from '@/lib/formateo';
 import { PuntoColor } from '@/components/ui/Badge';
 import { IconButton, IconLinkButton, clasesIconButton } from '@/components/ui/IconButton';
 import { MenuAcciones } from '@/components/ui/MenuAcciones';
-import { IconCamara, IconCheck, IconDoc, IconLink, IconMail, IconMas } from '@/components/ui/icons';
+import { IconCamaraDoc, IconCheck, IconLink, IconMail, IconMas } from '@/components/ui/icons';
 
 interface Props {
   gastos: GastoConServicio[];
@@ -24,11 +25,9 @@ interface Props {
   soloLectura?: boolean;
   /** Planilla desbloqueada: muestra el ⋯ de cada fila y la fila "Agregar servicio". */
   puedeEditar?: boolean;
-  /** Cámara: leer la factura por foto con IA para precargar el gasto (no se guarda la imagen).
-   *  La foto se captura en la propia fila (entrada de cámara) y se pasa al OCR ya tomada. */
-  onFoto?: (g: GastoConServicio, archivo: File) => void;
-  /** Documento adjunto (imagen/PDF): mismo OCR que la cámara; tampoco se guarda. */
-  onDoc?: (g: GastoConServicio) => void;
+  /** Leer la factura (foto o documento) con IA para precargar el gasto (no se guarda el archivo).
+   *  El selector nativo del dispositivo ofrece cámara, galería o archivos; el elegido se pasa al OCR. */
+  onArchivo?: (g: GastoConServicio, archivo: File) => void;
   onEditarServicio?: (g: GastoConServicio) => void;
   onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
@@ -41,10 +40,12 @@ interface Props {
   sinVencimiento?: boolean;
 }
 
-const COLS_EDIT    = 'grid grid-cols-[minmax(0,1.6fr)_7.5rem_7rem_6rem_10.5rem] items-center gap-3';
-const COLS_EDIT_SV = 'grid grid-cols-[minmax(0,1.6fr)_7.5rem_6rem_10.5rem] items-center gap-3';
-const COLS_RO      = 'grid grid-cols-[minmax(0,1fr)_7.5rem_7rem_8rem] items-center gap-3';
-const COLS_RO_SV   = 'grid grid-cols-[minmax(0,1fr)_7.5rem_8rem] items-center gap-3';
+const COLS_EDIT     = 'grid grid-cols-[minmax(0,1.6fr)_7.5rem_7rem_6rem_10.5rem] items-center gap-3';
+const COLS_EDIT_SV  = 'grid grid-cols-[minmax(0,1.6fr)_7.5rem_6rem_10.5rem] items-center gap-3';
+const COLS_RO       = 'grid grid-cols-[minmax(0,1fr)_7.5rem_7rem_8rem] items-center gap-3';
+const COLS_RO_SV    = 'grid grid-cols-[minmax(0,1fr)_7.5rem_8rem] items-center gap-3';
+// Histórico > Ingresos: solo Ingreso y Monto (sin Vencimiento, sin Cobro, sin Acciones).
+const COLS_RO_INGRESO = 'grid grid-cols-[minmax(0,1fr)_8rem] items-center gap-3';
 
 /** Banderas de estado de un gasto, compartidas por la vista escritorio y móvil. */
 function flags(g: GastoConServicio) {
@@ -54,7 +55,7 @@ function flags(g: GastoConServicio) {
   const pagadoTarde = pagado && Boolean(g.vencimiento && g.fecha_pago && g.fecha_pago > g.vencimiento);
   // Sin cargar: todavía no se confirmó un monto (fila "reiniciada" del mes) o,
   // si es acumulable, no tiene ninguna carga todavía.
-  const sinCargar = g.servicios?.acumulable ? (g.cargas?.length ?? 0) === 0 : g.monto == null;
+  const sinCargar = !tuvoMovimiento(g);
   return { vencido, pagado, pagadoTarde, sinCargar };
 }
 
@@ -65,8 +66,7 @@ export function GrillaGastos({
   soloLectura = false,
   puedeEditar = false,
   sinVencimiento = false,
-  onFoto,
-  onDoc,
+  onArchivo,
   onEditarServicio,
   onEliminarServicio,
   onEditarGasto,
@@ -74,9 +74,13 @@ export function GrillaGastos({
   onCargas,
   onAgregarServicio,
 }: Props) {
-  const cols = soloLectura
-    ? sinVencimiento ? COLS_RO_SV : COLS_RO
-    : sinVencimiento ? COLS_EDIT_SV : COLS_EDIT;
+  // Histórico > Ingresos: la grilla se reduce a Ingreso + Monto.
+  const soloIngresoYMonto = soloLectura && sinVencimiento;
+  const cols = soloIngresoYMonto
+    ? COLS_RO_INGRESO
+    : soloLectura
+      ? sinVencimiento ? COLS_RO_SV : COLS_RO
+      : sinVencimiento ? COLS_EDIT_SV : COLS_EDIT;
 
   // ----- Celdas reutilizables (mismas en escritorio y móvil) -----
 
@@ -226,33 +230,25 @@ export function GrillaGastos({
           <IconMas />
         </IconButton>
       )}
-      {/* Cámara: la entrada de archivo con `capture` abre la cámara directamente
-          (dentro del gesto del usuario); la foto tomada se envía al OCR. */}
+      {/* Cámara/documento en un solo botón: sin `capture`, el propio dispositivo
+          ofrece cámara, galería o archivos. El elegido se envía al OCR. */}
       <label
-        aria-label="Sacar foto de la factura"
-        title="Sacar foto de la factura"
+        aria-label="Leer factura por foto o documento"
+        title="Leer factura por foto o documento"
         className={`${clasesIconButton} cursor-pointer`}
       >
-        <IconCamara />
+        <IconCamaraDoc />
         <input
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,application/pdf"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) onFoto?.(g, file);
+            if (file) onArchivo?.(g, file);
             e.target.value = '';
           }}
         />
       </label>
-      <IconButton
-        aria-label="Leer datos de un documento"
-        title="Leer datos de un documento (imagen o PDF)"
-        onClick={() => onDoc?.(g)}
-      >
-        <IconDoc />
-      </IconButton>
       {/* El link a la plataforma solo aparece si el servicio tiene una URL cargada. */}
       {g.servicios?.url_pago && (
         <IconLinkButton
@@ -279,10 +275,10 @@ export function GrillaGastos({
       {/* -------- Escritorio: tabla en grilla -------- */}
       <div className="hidden md:block">
         <div className={`${cols} border-b border-border px-4 py-2.5 text-xs uppercase tracking-wide text-muted`}>
-          <span>Servicio</span>
+          <span>{soloIngresoYMonto ? 'Ingreso' : 'Servicio'}</span>
           <span>Monto</span>
           {!sinVencimiento && <span>Vencimiento</span>}
-          <span>{sinVencimiento ? 'Cobro' : 'Pago'}</span>
+          {!soloIngresoYMonto && <span>{sinVencimiento ? 'Cobro' : 'Pago'}</span>}
           {!soloLectura && <span className="text-right">Acciones</span>}
         </div>
 
@@ -308,7 +304,7 @@ export function GrillaGastos({
               <div className={`min-w-0 ${celdaDim}`}>{Servicio(g)}</div>
               <div className={celdaDim}>{Monto(g)}</div>
               {!sinVencimiento && <div className={celdaDim}>{Vencimiento(g, f.vencido)}</div>}
-              {Pago(g, f)}
+              {!soloIngresoYMonto && Pago(g, f)}
               {!soloLectura && Acciones(g)}
             </div>
           );
@@ -333,20 +329,22 @@ export function GrillaGastos({
                 <div className="shrink-0 text-right">{Monto(g)}</div>
               </div>
 
-              <div className="mt-2.5 flex items-end justify-between gap-3">
-                {!sinVencimiento && (
-                  <div className={celdaDim}>
-                    <span className="block text-[0.7rem] uppercase tracking-wide text-muted">Vencimiento</span>
-                    {Vencimiento(g, f.vencido)}
+              {!soloIngresoYMonto && (
+                <div className="mt-2.5 flex items-end justify-between gap-3">
+                  {!sinVencimiento && (
+                    <div className={celdaDim}>
+                      <span className="block text-[0.7rem] uppercase tracking-wide text-muted">Vencimiento</span>
+                      {Vencimiento(g, f.vencido)}
+                    </div>
+                  )}
+                  <div className={sinVencimiento ? 'w-full' : 'text-right'}>
+                    <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                      {sinVencimiento ? 'Cobro' : 'Pago'}
+                    </span>
+                    <div className={sinVencimiento ? '' : 'flex justify-end'}>{Pago(g, f)}</div>
                   </div>
-                )}
-                <div className={sinVencimiento ? 'w-full' : 'text-right'}>
-                  <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
-                    {sinVencimiento ? 'Cobro' : 'Pago'}
-                  </span>
-                  <div className={sinVencimiento ? '' : 'flex justify-end'}>{Pago(g, f)}</div>
                 </div>
-              </div>
+              )}
 
               {!soloLectura && <div className="mt-3 border-t border-border pt-2.5">{Acciones(g)}</div>}
             </div>

@@ -1,9 +1,17 @@
 // Formateo de moneda (ARS), fechas y períodos en español.
 import type { Carga } from '@/types/database';
+import type { GastoConServicio } from '@/types/modelos';
 
 /** Suma de los montos de una lista de cargas (servicio acumulable). */
 export function sumarCargas(cargas: Carga[] | null | undefined): number {
   return (cargas ?? []).reduce((s, c) => s + (c.monto ?? 0), 0);
+}
+
+/** Un gasto "tuvo movimiento" si ya se cargó de verdad: monto confirmado o,
+ *  si es acumulable, al menos una carga. Una fila "reiniciada" sin cargar
+ *  todavía no cuenta — no debe aparecer en el Histórico. */
+export function tuvoMovimiento(g: GastoConServicio): boolean {
+  return g.servicios?.acumulable ? (g.cargas?.length ?? 0) > 0 : g.monto != null;
 }
 
 /** Fecha de la última carga (la más reciente), o null si no hay cargas. */

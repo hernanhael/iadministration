@@ -39,6 +39,9 @@ const Factura = z.object({
 const Body = z.object({
   imagen: z.string().min(1), // base64 sin el prefijo data:
   mime: z.enum(MIME_VALIDOS),
+  // Indicación libre del usuario para ayudar a individualizar el gasto en
+  // documentos con varias facturas/páginas (ej. expensas de todo un edificio).
+  instrucciones: z.string().trim().max(500).optional(),
 });
 
 export async function POST(req: Request) {
@@ -64,7 +67,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: 'Imagen inválida o formato no soportado.' }, { status: 400 });
   }
-  const { imagen, mime } = parsed.data;
+  const { imagen, mime, instrucciones } = parsed.data;
 
   // 4) Extraer con el modelo de visión.
   try {
@@ -91,7 +94,11 @@ export async function POST(req: Request) {
             adjunto,
             {
               type: 'text',
-              text: 'Extraé el importe total a pagar, la fecha de primer vencimiento y la empresa emisora de este documento.',
+              text:
+                'Extraé el importe total a pagar, la fecha de primer vencimiento y la empresa emisora de este documento.' +
+                (instrucciones
+                  ? `\n\nIndicación del usuario para individualizar el gasto correcto (por ejemplo, si el documento tiene varias facturas o páginas): ${instrucciones}`
+                  : ''),
             },
           ],
         },

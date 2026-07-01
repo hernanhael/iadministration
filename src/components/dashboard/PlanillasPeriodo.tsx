@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { GastoConServicio, Planilla } from '@/types/modelos';
-import { formatearMonto, porNombre } from '@/lib/formateo';
+import { formatearMonto, porNombre, tuvoMovimiento } from '@/lib/formateo';
 import { GrillaGastos } from './GrillaGastos';
 import {
   IconBasura,
@@ -25,8 +25,7 @@ interface Props {
   colapsable?: boolean;
   /** Ocultar las planillas que no tienen gastos (default false). */
   ocultarVacias?: boolean;
-  onFoto?: (g: GastoConServicio, archivo: File) => void;
-  onDoc?: (g: GastoConServicio) => void;
+  onArchivo?: (g: GastoConServicio, archivo: File) => void;
   onEditarServicio?: (g: GastoConServicio) => void;
   onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
@@ -58,6 +57,9 @@ export function PlanillasPeriodo({
     const map: Record<string, GastoConServicio[]> = {};
     for (const p of planillas) map[p.id] = [];
     for (const g of gastos) {
+      // En Histórico solo se muestran filas que representaron un gasto/ingreso
+      // efectivo: las "reiniciadas" sin cargar nunca llegaron a concretarse.
+      if (soloLectura && !tuvoMovimiento(g)) continue;
       const id = g.servicios?.planilla_id;
       if (id && map[id]) map[id].push(g);
     }
@@ -67,7 +69,7 @@ export function PlanillasPeriodo({
       );
     }
     return map;
-  }, [gastos, planillas]);
+  }, [gastos, planillas, soloLectura]);
 
   const totales = useMemo(() => {
     const map: Record<string, number> = {};
