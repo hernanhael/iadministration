@@ -18,6 +18,13 @@ export const maxDuration = 60;
 
 type Resultado = 'aplicado' | 'sin_match' | 'sin_monto' | 'ya_confirmado' | 'error';
 
+/** Header Date del correo → ISO, o null si no es parseable (no puede tirar abajo el log). */
+function fechaISO(fecha: string | null): string | null {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 const Deteccion = z.object({
   servicio_id: z
     .string()
@@ -204,7 +211,7 @@ export async function GET(req: Request) {
       gmail_thread_id: threadId,
       remitente: correoRemitente,
       asunto: correoAsunto,
-      fecha_recibido: correoFecha ? new Date(correoFecha).toISOString() : null,
+      fecha_recibido: fechaISO(correoFecha),
       resultado,
       servicio_id: servicioId,
       gasto_id: gastoId,

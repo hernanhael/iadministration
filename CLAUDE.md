@@ -60,7 +60,7 @@ Cambios de producto sobre el spec (decididos con el usuario):
 **App completamente funcional en producción (Vercel).** Fases 1–5 + módulo de ingresos + borrado lógico + deploy verificados.
 
 - **Deploy:** ✅ app en Vercel conectada al repo `hernanhael/iadministration`. Variables de entorno cargadas en Vercel. Deploy automático en cada push a `main`.
-- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001` a `0004` aplicadas.
+- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001` a `0005` aplicadas (`0006` pendiente, va junto con el setup del cron de Gmail).
 - **Auth:** ✅ registro, login y sesión verificados en producción. URL de callback configurada en Supabase.
 - **CRUD:** ✅ planillas, servicios y gastos funcionando con datos reales.
 - **Recurrencia:** ✅ `generar_gastos_periodo` genera filas al abrir el Mes.

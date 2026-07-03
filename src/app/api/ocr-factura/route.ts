@@ -36,8 +36,11 @@ const Factura = z.object({
     .describe('Nombre de la empresa o proveedor que emite la factura. null si no se distingue.'),
 });
 
+// 5 MB binarios ≈ 6,9 M de caracteres base64 (límite del spec para contener costo y errores).
+const MAX_BASE64 = 7_000_000;
+
 const Body = z.object({
-  imagen: z.string().min(1), // base64 sin el prefijo data:
+  imagen: z.string().min(1).max(MAX_BASE64), // base64 sin el prefijo data:
   mime: z.enum(MIME_VALIDOS),
   // Indicación libre del usuario para ayudar a individualizar el gasto en
   // documentos con varias facturas/páginas (ej. expensas de todo un edificio).
@@ -63,7 +66,14 @@ export async function POST(req: Request) {
   }
 
   // 3) Validar el cuerpo.
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  const body = await req.json().catch(() => null);
+  if (typeof body?.imagen === 'string' && body.imagen.length > MAX_BASE64) {
+    return Response.json(
+      { error: 'El archivo supera el tamaño máximo (5 MB). Probá con una foto más liviana.' },
+      { status: 413 },
+    );
+  }
+  const parsed = Body.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: 'Imagen inválida o formato no soportado.' }, { status: 400 });
   }
