@@ -56,12 +56,17 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Burbujas de ResumenCards mostraban egreso fantasma al eliminar planilla:** `serv.servicios` no se recargaba tras borrar una planilla, por lo que sus servicios seguían siendo visibles en memoria. Fix: `serv.recargar()` llamado explícitamente después de `pl.eliminar()` en el dashboard.
 - **ResumenCards incluía gastos de planillas inactivas:** `delMes` filtraba servicios inactivos pero no cruzaba contra planillas activas; gastos de planillas eliminadas aparecían en las cards sin sección visible debajo. Fix: `delMes` en `dashboard/page.tsx` construye `plActivas` (set de `planilla_id` de planillas con `activo = true`) y excluye gastos cuyo `planilla_id` no esté en ese set.
 
-## Estado al 2026-06-30
+## Bugs resueltos en producción (2026-07-04)
+
+- **No se podían registrar usuarios nuevos:** todo `POST /signup` fallaba con `500: Database error saving new user` (`SQLSTATE 42P10`, "no unique or exclusion constraint matching the ON CONFLICT specification"). Causa: un trigger `on_auth_user_created_seed` en `auth.users` (creado a mano en algún momento, **fuera de las migraciones versionadas**) llamaba a `seed_planillas_usuario()`, que insertaba planillas hardcodeadas del desarrollador ("Clío Mío", "Ituzaingó 1247") para todo usuario nuevo vía `ON CONFLICT (user_id, nombre)`. Ese conflict target dejó de matchear ningún constraint desde que la migración `0004` reemplazó el `unique(user_id, nombre)` de `planillas` por un índice único parcial (`WHERE activo = true`). Fix: migración `0008_eliminar_seed_planillas.sql` elimina el trigger y la función — no se reemplaza por nada, ya que la decisión de producto siempre fue que los usuarios crean sus planillas desde cero (sin seed automático).
+- **Confirmación de email redirigía a `localhost`:** el **Site URL** de Auth en el proyecto de Supabase seguía apuntando a `http://localhost:3000` (nunca se actualizó al pasar a producción). Fix: Site URL → `https://iadministration.vercel.app` y Redirect URLs → `https://iadministration.vercel.app/**` en el dashboard de Supabase (Authentication → URL Configuration). Cambio manual, no versionado en el repo.
+
+## Estado al 2026-07-04
 **App completamente funcional en producción (Vercel).** Fases 1–5 + módulo de ingresos + borrado lógico + deploy verificados.
 
 - **Deploy:** ✅ app en Vercel conectada al repo `hernanhael/iadministration`. Variables de entorno cargadas en Vercel. Deploy automático en cada push a `main`.
-- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001` a `0004` aplicadas.
-- **Auth:** ✅ registro, login y sesión verificados en producción. URL de callback configurada en Supabase.
+- **Backend Supabase:** ✅ proyecto `mramvepdcosmylxeaden` activo. Migraciones `0001` a `0008` aplicadas.
+- **Auth:** ✅ registro, login y sesión verificados en producción (incluye el fix del trigger de seed y del Site URL, ver "Bugs resueltos en producción (2026-07-04)"). URL de callback y Site URL configurados en Supabase apuntando a `https://iadministration.vercel.app`.
 - **CRUD:** ✅ planillas, servicios y gastos funcionando con datos reales.
 - **Recurrencia:** ✅ `generar_gastos_periodo` genera filas al abrir el Mes.
 - **OCR:** ✅ `POST /api/ocr-factura` con claude-haiku-4-5 funcionando.
@@ -70,20 +75,12 @@ Cambios de producto sobre el spec (decididos con el usuario):
 - **Borrado lógico:** ✅ servicios y planillas se desactivan preservando el historial.
 - **`.env.local`:** ✅ configurado (no commitear — está en `.gitignore`).
 - **`.env.example`:** ✅ commiteado como referencia de las variables necesarias (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER_EMAIL`, `CRON_USER_ID`, `CRON_SECRET`).
-- **Cron de importación por Gmail:** ⏳ código listo (`GET /api/cron/gmail-facturas`), pendiente de setup manual (proyecto Google Cloud + OAuth + migración `0006` + carga de variables) antes de activarse en producción. No requiere configurar nada por servicio: el matching es por IA contra `empresa`/`nombre`.
+- **Cron de importación por Gmail:** ✅ activo en producción. Proyecto de Google Cloud creado (OAuth consent screen External, Publishing status "In production"), credencial OAuth Desktop app, `GMAIL_REFRESH_TOKEN` obtenido con `scripts/gmail-auth.ts`, migración `0006` aplicada, variables cargadas en `.env.local` y Vercel, probado en local (`curl` contra `/api/cron/gmail-facturas` → 200 OK) antes del deploy. No requiere configurar nada por servicio: el matching es por IA contra `empresa`/`nombre`.
 - **Migración histórica:** ✅ historial 2024–2026 importado desde Google Sheets vía dos scripts de migración. Ambos ya fueron ejecutados y no necesitan volver a correrse. Leen credenciales desde `.env.local` + variable `MIGRATION_USER_ID`.
   - `scripts/migrate-sheets.ts`: planillas "Inmueble" (Av. Nicolás Avellaneda 632, 4A) y "Cochera N° 10" con sus servicios y 166 gastos históricos (2024-05 → 2026-06).
   - `scripts/migrate-personal.ts`: planilla "Personal" (egreso, 14 servicios) y "Ingresos Mensuales" (ingreso, 5 servicios) con 216 egresos (2024-08 → 2026-06) y 17 ingresos (2026-01 → 2026-06). Excluye "Cochera del Departamento" y "Departamento" de los egresos. Servicios inactivos: Apple Cloud 2, Keepa, ML Nivel 6, SanCor.
 
-**Próximo paso — activar el cron de importación por Gmail (código ya en `main`, falta el setup manual):**
-1. Google Cloud: crear/seleccionar proyecto, habilitar Gmail API, pantalla de consentimiento OAuth (tipo External, usuario `hernanhael@gmail.com`, **Publishing status = "In production"** — no "Testing", o el refresh token expira a los 7 días), credencial OAuth **Desktop app** → `client_id`/`client_secret`.
-2. Correr una vez: `GMAIL_CLIENT_ID=... GMAIL_CLIENT_SECRET=... npx tsx scripts/gmail-auth.ts` → guarda el `GMAIL_REFRESH_TOKEN` que imprime.
-3. Aplicar `supabase/migrations/0006_gmail_auto_import.sql` en el SQL Editor de Supabase (proyecto `mramvepdcosmylxeaden`) — mismo mecanismo manual usado para `0005`.
-4. Cargar en Vercel (Project Settings → Environment Variables) y en `.env.local`: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_USER_EMAIL`, `CRON_USER_ID` (mismo valor que `MIGRATION_USER_ID`), `CRON_SECRET` (generar con `openssl rand -base64 32`).
-5. Probar local antes de confiar en el cron real: `npm run dev` + `curl -i http://localhost:3000/api/cron/gmail-facturas -H "Authorization: Bearer $CRON_SECRET"`, revisar la respuesta y los `gastos`/`gmail_procesados` en Supabase.
-6. Deploy y confirmar en el dashboard de Vercel (Cron Jobs) que el primer disparo real devuelve 200.
-
-Una vez activo, próximo paso general: uso real y feedback del usuario.
+**Próximo paso:** uso real y feedback del usuario. Falta solo confirmar en el dashboard de Vercel (Cron Jobs) que el primer disparo real automático (`0 9 * * *`) devuelve 200 — ya se probó manualmente en local con éxito.
 
 El plan de cierre de cada fase está en la sección 9 del spec (`docs/spec.md`).
 
