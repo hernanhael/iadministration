@@ -4,7 +4,7 @@ Versión 1.0 — Junio 2026. Documento de diseño para desarrollo con Claude Cod
 
 ---
 
-## Estado de implementación y decisiones (actualizado 2026-06-18)
+## Estado de implementación y decisiones (actualizado 2026-07-03)
 
 > Esta sección refleja lo construido y las decisiones tomadas con el usuario durante el desarrollo. Cuando contradiga al diseño original de abajo, **prevalece esta sección**. El detalle vivo y más fino está en `CLAUDE.md`; el resto de este documento se conserva como referencia de intención de diseño original.
 
@@ -53,17 +53,7 @@ Versión 1.0 — Junio 2026. Documento de diseño para desarrollo con Claude Cod
 
 **Modo vista previa** (`src/lib/preview.ts`): sin credenciales de Supabase en `.env.local`, la app levanta con datos demo (`DEMO_PLANILLAS` / `DEMO_SERVICIOS` / `DEMO_GASTOS`, incluye un servicio Nafta acumulable con cargas) y las mutaciones avisan en vez de persistir. Se apaga al completar las variables. (En la demo, Luz/EDET no tiene gasto del mes actual a propósito, para mostrar una fila reiniciada.)
 
-**Progreso por fase — las 5 fases están con el código completo** (build/lint/tsc en verde). Todo corre en **modo vista previa** porque `.env.local` está vacío (no hay proyecto Supabase ni `ANTHROPIC_API_KEY` todavía).
-- **Fase 1 (Fundaciones)** y **Fase 2 (CRUD + carga manual):** ✅ código completo. ⏳ falta verificar con Supabase.
-- **Fase 3 (Recurrencia + dashboard):** ✅ Mes/Histórico/gráfico hechos; `useGastos.generarPeriodo()` llama la RPC al abrir el Mes (no-op en demo). ⏳ falta correr la migración y verificar.
-- **Fase 4 (OCR):** ✅ `POST /api/ocr-factura` (claude-haiku-4-5 + visión/PDF + zod), `ModalOcr` + `src/lib/ocr.ts`. ⏳ falta probar con API key real.
-- **Fase 5 (Informes IA):** ✅ `POST /api/informe` (claude-sonnet-4-6), `src/lib/informe.ts`. ⏳ falta probar con API key real.
-
-**Próximo paso al retomar — provisionar el backend real:**
-1. Crear el proyecto Supabase y correr la migración `0001_init.sql` en el SQL editor (no hay CLI instalado).
-2. Completar `.env.local` (URL + anon + service_role + `ANTHROPIC_API_KEY`).
-3. Regenerar tipos: `supabase gen types typescript --linked > src/types/database.ts`.
-4. Verificar contra datos reales: auth, RLS, CRUD de planillas/servicios/gastos, recurrencia, **acumulables/cargas**, OCR e informe.
+**Progreso — las 5 fases completas y verificadas en producción** (Vercel + Supabase con datos reales, incluido el historial 2024–2026 migrado desde Google Sheets). Además del plan original se agregaron: módulo de **ingresos** (`planillas.tipo`), **borrado lógico** de servicios y planillas, y el **cron de importación de facturas por Gmail** (`/api/cron/gmail-facturas`, excepción documentada a la regla de confirmación manual). El estado vivo, el detalle de cada decisión y el próximo paso pendiente están en `CLAUDE.md` (sección "Estado").
 
 ---
 
@@ -295,24 +285,6 @@ Todo campo ilegible viene en `null` y listado en `campos_dudosos`. El endpoint p
 
 Entrada: `{ "desde": "2026-01", "hasta": "2026-06", "alcance": { "tipo": null, "categoria_id": null, "servicio_id": null } }`. El servidor consulta los agregados (total por período, por categoría y por servicio, variaciones intermensuales, gastos vencidos del rango) y envía a la IA únicamente ese resumen numérico —nunca las facturas ni datos personales— con la instrucción de redactar en español un informe con: resumen ejecutivo, evolución del gasto total, los tres servicios de mayor variación con porcentajes, y observaciones accionables. Salida: Markdown.
 
-## 8. Seguridad
-
-La clave `ANTHROPIC_API_KEY` y la `SUPABASE_SERVICE_ROLE_KEY` viven solo en variables de entorno del servidor; el cliente conoce únicamente `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, que son públicas por diseño porque RLS es la barrera real. Todo endpoint de IA valida la sesión y la pertenencia de los recursos referenciados. Las imágenes se sirven con URLs firmadas, nunca públicas. Validación de entrada con Zod en ambos endpoints. Límite de tamaño de imagen (5 MB) y de frecuencia razonable en los endpoints de IA para contener el costo ante errores de la UI.
-
-## 9. Plan de desarrollo por fases (para Claude Code)
-
-Trabajar una fase por vez y verificar su criterio de cierre antes de seguir.
-
-**Fase 1 — Fundaciones.** Proyecto Next.js con TypeScript y Tailwind; proyecto Supabase; esquema SQL completo de la sección 4 (tablas, índices, RLS, bucket, trigger de seed); auth por email/contraseña con páginas de registro, login y recuperación. Cierre: dos usuarios registrados no pueden ver datos del otro ni siquiera consultando Supabase directamente con sus tokens.
-
-**Fase 2 — CRUD y carga manual.** Pantallas de administración de servicios y categorías; carga manual de gastos; historial con filtros. Cierre: ciclo completo crear categoría → crear servicio → cargar gasto → editarlo → verlo en el historial.
-
-**Fase 3 — Recurrencia y dashboard.** Función `generar_gastos_periodo` e invocación al abrir la app; dashboard con tarjetas de resumen, lista del mes por urgencia, link de pago y gráfico Recharts con todos los controles de la sección 6.1. Cierre: al cambiar de mes (simulable pasando un período futuro a la RPC) aparecen los pendientes "a confirmar" con el monto anterior.
-
-**Fase 4 — OCR de facturas.** Subida de imagen al bucket, endpoint `/api/ocr-factura`, precarga del formulario con campos dudosos marcados, creación de servicio embebida. Cierre: una foto de factura real precarga el formulario y el gasto solo se guarda al confirmar.
-
-**Fase 5 — Informes y pulido.** Endpoint `/api/informe`, pantalla de informes con render de Markdown, estados de carga y error consistentes en toda la app, revisión responsive móvil (la carga por foto es el caso de uso móvil principal). Cierre: informe anual generado con datos reales de al menos tres meses.
-
 ## 8. Estructura de directorios
 
 ```
@@ -403,7 +375,11 @@ Trabajar una fase por vez y verificar su criterio de cierre antes de seguir.
 
 **Fase 5 — Informes y pulido.** Endpoint `/api/informe`, pantalla de informes con render de Markdown, estados de carga y error consistentes en toda la app, revisión responsive móvil (la carga por foto es el caso de uso móvil principal). Cierre: informe anual generado con datos reales de al menos tres meses.
 
-## 10. Variables de entorno
+## 10. Seguridad
+
+La clave `ANTHROPIC_API_KEY` y la `SUPABASE_SERVICE_ROLE_KEY` viven solo en variables de entorno del servidor; el cliente conoce únicamente `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, que son públicas por diseño porque RLS es la barrera real. Todo endpoint de IA valida la sesión y la pertenencia de los recursos referenciados. Validación de entrada con Zod en ambos endpoints. Límite de tamaño de imagen (5 MB) y de frecuencia razonable en los endpoints de IA para contener el costo ante errores de la UI.
+
+## 11. Variables de entorno
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
@@ -412,6 +388,8 @@ SUPABASE_SERVICE_ROLE_KEY=      # solo servidor
 ANTHROPIC_API_KEY=              # solo servidor
 ```
 
-## 11. Fuera de alcance (decidido, no olvidado)
+La lista completa vigente (incluidas las variables del cron de Gmail) está en `.env.example`.
+
+## 12. Fuera de alcance (decidido, no olvidado)
 
 Notificaciones por email o push; espacio de gastos compartidos entre usuarios (el esquema lo admite a futuro agregando una tabla de grupos y una FK opcional, sin migración destructiva); multi-moneda; presupuestos y metas de ahorro; importación bancaria automática.

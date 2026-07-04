@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { SUPABASE_CONFIGURADO } from '@/lib/preview';
 
 // Rutas que requieren sesión. Si no hay usuario, se redirige a /login.
-const RUTAS_PROTEGIDAS = ['/dashboard', '/servicios', '/informes', '/historial'];
+const RUTAS_PROTEGIDAS = ['/dashboard', '/historico', '/graficos'];
 // Rutas de autenticación: si ya hay sesión, se redirige al dashboard.
 const RUTAS_AUTH = ['/login', '/registro', '/recuperar'];
 
