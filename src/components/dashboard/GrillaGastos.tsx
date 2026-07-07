@@ -1,16 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import type { GastoConServicio } from '@/types/modelos';
 import {
+  displayAIso,
   estaVencido,
   formatearFecha,
   formatearFechaCorta,
   formatearMonto,
+  isoADisplay,
   sumarCargas,
   tuvoMovimiento,
   ultimaFechaCarga,
 } from '@/lib/formateo';
 import { PuntoColor } from '@/components/ui/Badge';
+import { CalendarioMensual } from '@/components/ui/CalendarioMensual';
 import { IconButton, IconLinkButton, clasesIconButton } from '@/components/ui/IconButton';
 import { MenuAcciones } from '@/components/ui/MenuAcciones';
 import { IconCamaraDoc, IconCheck, IconLink, IconMail, IconMas } from '@/components/ui/icons';
@@ -31,6 +35,9 @@ interface Props {
   onEditarServicio?: (g: GastoConServicio) => void;
   onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
+  /** Edición al toque, directo en la celda (solo con la planilla desbloqueada). */
+  onEditarMonto?: (g: GastoConServicio, monto: number | null) => void;
+  onEditarVencimiento?: (g: GastoConServicio, vencimiento: string | null) => void;
   onTogglePago?: (g: GastoConServicio) => void;
   /** Gestionar las cargas del mes de un servicio acumulable (ej. nafta). */
   onCargas?: (g: GastoConServicio) => void;
@@ -59,6 +66,125 @@ function flags(g: GastoConServicio) {
   return { vencido, pagado, pagadoTarde, sinCargar };
 }
 
+/** Celda de Monto: con la planilla desbloqueada, se edita al toque (tipeando). */
+function CeldaMonto({
+  gasto,
+  editable,
+  onGuardar,
+}: {
+  gasto: GastoConServicio;
+  editable: boolean;
+  onGuardar: (monto: number | null) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState('');
+
+  function empezar() {
+    setBorrador(gasto.monto != null ? String(gasto.monto) : '');
+    setEditando(true);
+  }
+
+  function confirmar() {
+    const texto = borrador.trim();
+    const monto = texto === '' ? null : Number(texto.replace(',', '.'));
+    if (monto === null || (!Number.isNaN(monto) && monto >= 0)) {
+      if (monto !== gasto.monto) onGuardar(monto);
+    }
+    setEditando(false);
+  }
+
+  if (editando) {
+    return (
+      <input
+        autoFocus
+        type="text"
+        inputMode="decimal"
+        value={borrador}
+        onChange={(e) => setBorrador(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); confirmar(); }
+          if (e.key === 'Escape') { e.preventDefault(); setEditando(false); }
+        }}
+        className="tabular w-full rounded-lg border border-muted bg-surface-2 px-2 py-1 text-sm font-extrabold text-foreground outline-none"
+      />
+    );
+  }
+
+  const contenido = gasto.monto_confirmado ? (
+    <span className="tabular font-extrabold">{formatearMonto(gasto.monto)}</span>
+  ) : (
+    <span className="tabular font-semibold italic text-muted" title="Monto a confirmar">
+      {formatearMonto(gasto.monto)}
+    </span>
+  );
+
+  if (!editable) return <div className="min-w-0">{contenido}</div>;
+
+  return (
+    <button
+      type="button"
+      onClick={empezar}
+      title="Editar monto"
+      className="min-w-0 rounded text-left transition-opacity hover:opacity-70"
+    >
+      {contenido}
+    </button>
+  );
+}
+
+/** Celda de Vencimiento: con la planilla desbloqueada, se edita del calendario
+ *  desplegable (mismo componente que en "Editar gasto del mes"). */
+function CeldaVencimiento({
+  gasto,
+  vencido,
+  editable,
+  onGuardar,
+}: {
+  gasto: GastoConServicio;
+  vencido: boolean;
+  editable: boolean;
+  onGuardar: (vencimiento: string | null) => void;
+}) {
+  const contenido = (
+    <>
+      <span className={vencido ? 'font-bold text-danger' : ''}>{formatearFecha(gasto.vencimiento)}</span>
+      {vencido && <span className="ml-1 text-xs font-semibold text-danger md:ml-0 md:block">vencido</span>}
+    </>
+  );
+
+  if (!editable) {
+    return <div className="tabular text-sm">{contenido}</div>;
+  }
+
+  // Sin monto cargado todavía: no tiene sentido fijar un vencimiento antes que eso.
+  if (gasto.monto == null) {
+    return (
+      <div className="tabular text-sm text-muted/60" title="Cargá el monto antes de fijar el vencimiento">
+        {contenido}
+      </div>
+    );
+  }
+
+  return (
+    <CalendarioMensual
+      value={isoADisplay(gasto.vencimiento)}
+      onElegir={(display) => onGuardar(displayAIso(display))}
+    >
+      {({ alternar }) => (
+        <button
+          type="button"
+          onClick={alternar}
+          title="Editar vencimiento"
+          className="tabular text-left text-sm transition-opacity hover:opacity-70"
+        >
+          {contenido}
+        </button>
+      )}
+    </CalendarioMensual>
+  );
+}
+
 export function GrillaGastos({
   gastos,
   pieTotal,
@@ -70,6 +196,8 @@ export function GrillaGastos({
   onEditarServicio,
   onEliminarServicio,
   onEditarGasto,
+  onEditarMonto,
+  onEditarVencimiento,
   onTogglePago,
   onCargas,
   onAgregarServicio,
@@ -115,12 +243,12 @@ export function GrillaGastos({
         </div>
       );
     }
-    return g.monto_confirmado ? (
-      <span className="tabular font-extrabold">{formatearMonto(g.monto)}</span>
-    ) : (
-      <span className="tabular font-semibold italic text-muted" title="Monto a confirmar">
-        {formatearMonto(g.monto)}
-      </span>
+    return (
+      <CeldaMonto
+        gasto={g}
+        editable={puedeEditar}
+        onGuardar={(monto) => onEditarMonto?.(g, monto)}
+      />
     );
   };
 
@@ -128,10 +256,12 @@ export function GrillaGastos({
     // Los servicios acumulables (nafta) se pagan al cargar: no tienen vencimiento.
     if (g.servicios?.acumulable) return <div className="tabular text-sm text-muted">—</div>;
     return (
-      <div className="tabular text-sm">
-        <span className={vencido ? 'font-bold text-danger' : ''}>{formatearFecha(g.vencimiento)}</span>
-        {vencido && <span className="ml-1 text-xs font-semibold text-danger md:ml-0 md:block">vencido</span>}
-      </div>
+      <CeldaVencimiento
+        gasto={g}
+        vencido={vencido}
+        editable={puedeEditar}
+        onGuardar={(vencimiento) => onEditarVencimiento?.(g, vencimiento)}
+      />
     );
   };
 
@@ -194,6 +324,16 @@ export function GrillaGastos({
             </button>
             {pagadoTarde && <div className="text-xs font-semibold text-danger">vencido</div>}
           </>
+        ) : g.monto == null ? (
+          <button
+            type="button"
+            aria-label="Sin monto cargado: no se puede marcar como pagado"
+            title="Sin monto cargado: no se puede marcar como pagado"
+            disabled
+            className="-ml-1 cursor-not-allowed rounded p-1 text-muted/40"
+          >
+            <IconCheck />
+          </button>
         ) : (
           <button
             type="button"
@@ -211,16 +351,18 @@ export function GrillaGastos({
 
   const Acciones = (g: GastoConServicio) => {
     const acum = Boolean(g.servicios?.acumulable);
+    // En ingresos, "servicio" se llama "concepto" de cara al usuario.
+    const nombreEditable = sinVencimiento ? 'concepto' : 'servicio';
     // En acumulables no se edita un monto único: las cargas se gestionan aparte.
     const menu = acum
       ? [
-          { label: 'Editar servicio', onClick: () => onEditarServicio?.(g) },
-          { label: 'Eliminar servicio', onClick: () => onEliminarServicio?.(g), peligro: true },
+          { label: `Editar ${nombreEditable}`, onClick: () => onEditarServicio?.(g) },
+          { label: `Eliminar ${nombreEditable}`, onClick: () => onEliminarServicio?.(g), peligro: true },
         ]
       : [
-          { label: 'Editar servicio', onClick: () => onEditarServicio?.(g) },
-          { label: 'Editar gasto del mes', onClick: () => onEditarGasto?.(g) },
-          { label: 'Eliminar servicio', onClick: () => onEliminarServicio?.(g), peligro: true },
+          { label: `Editar ${nombreEditable}`, onClick: () => onEditarServicio?.(g) },
+          { label: sinVencimiento ? 'Editar monto' : 'Editar gasto del mes', onClick: () => onEditarGasto?.(g) },
+          { label: `Eliminar ${nombreEditable}`, onClick: () => onEliminarServicio?.(g), peligro: true },
         ];
     return (
     <div className="flex items-center justify-end gap-1.5">
@@ -275,7 +417,7 @@ export function GrillaGastos({
       {/* -------- Escritorio: tabla en grilla -------- */}
       <div className="hidden md:block">
         <div className={`${cols} border-b border-border px-4 py-2.5 text-xs uppercase tracking-wide text-muted`}>
-          <span>{soloIngresoYMonto ? 'Ingreso' : 'Servicio'}</span>
+          <span>{sinVencimiento ? 'Concepto' : 'Servicio'}</span>
           <span>Monto</span>
           {!sinVencimiento && <span>Vencimiento</span>}
           {!soloIngresoYMonto && <span>{sinVencimiento ? 'Cobro' : 'Pago'}</span>}
@@ -359,7 +501,7 @@ export function GrillaGastos({
           onClick={onAgregarServicio}
           className="flex w-full items-center justify-center gap-1.5 border-t border-border px-4 py-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2/40 hover:text-foreground"
         >
-          <IconMas size={16} /> Agregar gasto o servicio
+          <IconMas size={16} /> {sinVencimiento ? 'Agregar concepto' : 'Agregar gasto o servicio'}
         </button>
       )}
 

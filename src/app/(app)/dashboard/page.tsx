@@ -159,6 +159,23 @@ export default function MesPage() {
     void accion.catch((e) => setAviso(e instanceof Error ? e.message : 'No se pudo guardar.'));
   }
 
+  /** Edición al toque de Monto o Vencimiento directo en la celda (planilla
+   *  desbloqueada): conserva el resto del gasto y solo pisa el campo tocado. */
+  function editarCampoGasto(g: GastoConServicio, cambios: Partial<Pick<GastoInput, 'monto' | 'vencimiento'>>) {
+    const input: GastoInput = {
+      servicio_id: g.servicio_id,
+      periodo: g.periodo,
+      monto: g.monto,
+      vencimiento: g.vencimiento,
+      fecha_pago: g.fecha_pago,
+      observacion: g.observacion,
+      ...cambios,
+    };
+    // Fila reiniciada: todavía no existe el gasto → se crea al cargar el primer dato.
+    const accion = esNuevo(g) ? crear(input) : actualizar(g.id, input);
+    void accion.catch((e) => setAviso(e instanceof Error ? e.message : 'No se pudo guardar.'));
+  }
+
   /** Guarda las cargas de un servicio acumulable: el monto es la suma y la fecha
    *  de pago, la de la última carga (cada carga se paga al hacerla). */
   function guardarCargas(g: GastoConServicio, cargas: Carga[]) {
@@ -238,6 +255,8 @@ export default function MesPage() {
           onArchivo={(g, archivo) => setOcrPara({ gasto: g, archivo })}
           onEditarServicio={editarServicio}
           onEditarGasto={(g) => setGastoEnEdicion(g)}
+          onEditarMonto={(g, monto) => editarCampoGasto(g, { monto })}
+          onEditarVencimiento={(g, vencimiento) => editarCampoGasto(g, { vencimiento })}
           onEliminarServicio={(g) => setServicioABorrar(g)}
           onTogglePago={togglePago}
           onCargas={(g) => setCargasPara({ gasto: g })}
@@ -254,6 +273,7 @@ export default function MesPage() {
           onCerrar={() => setServicioModal(null)}
           servicioInicial={servicioModal.inicial}
           planillaIdInicial={servicioModal.planillaId}
+          esIngreso={tipo === 'ingreso'}
           onGuardar={async (input) => {
             if (servicioModal.inicial) await serv.actualizar(servicioModal.inicial.id, input);
             else await serv.crear(input);
@@ -309,10 +329,15 @@ export default function MesPage() {
         <Modal
           abierto
           onCerrar={() => setGastoEnEdicion(null)}
-          titulo={esNuevo(gastoEnEdicion) ? 'Cargar gasto del mes' : 'Editar gasto del mes'}
+          titulo={
+            tipo === 'ingreso'
+              ? esNuevo(gastoEnEdicion) ? 'Cargar monto' : 'Editar monto'
+              : esNuevo(gastoEnEdicion) ? 'Cargar gasto del mes' : 'Editar gasto del mes'
+          }
         >
           <FormularioGasto
             gastoInicial={gastoEnEdicion}
+            esIngreso={tipo === 'ingreso'}
             onGuardar={(input) =>
               esNuevo(gastoEnEdicion) ? crear(input) : actualizar(gastoEnEdicion.id, input)
             }
@@ -325,13 +350,19 @@ export default function MesPage() {
       {/* Eliminar servicio */}
       <Confirmacion
         abierto={Boolean(servicioABorrar)}
-        titulo="Eliminar servicio"
+        titulo={tipo === 'ingreso' ? 'Eliminar concepto' : 'Eliminar servicio'}
         peligro
         textoConfirmar="Eliminar"
         mensaje={
-          <>
-            ¿Eliminar el servicio <strong>{servicioABorrar?.servicios?.nombre}</strong>? No va a aparecer en los próximos meses. El historial anterior se conserva.
-          </>
+          tipo === 'ingreso' ? (
+            <>
+              ¿Eliminar el concepto <strong>{servicioABorrar?.servicios?.nombre}</strong>? No va a aparecer en los próximos meses. El historial anterior se conserva.
+            </>
+          ) : (
+            <>
+              ¿Eliminar el servicio <strong>{servicioABorrar?.servicios?.nombre}</strong>? No va a aparecer en los próximos meses. El historial anterior se conserva.
+            </>
+          )
         }
         onConfirmar={async () => {
           if (servicioABorrar) {

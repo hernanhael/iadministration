@@ -15,17 +15,24 @@ interface Props {
   servicioInicial?: ServicioConPlanilla | null;
   /** Planilla a la que pertenece el servicio (se pasa siempre desde el contexto). */
   planillaIdInicial?: string;
+  /** Planilla de ingreso: se llama "concepto" y no tiene proveedor, N° de cliente
+   *  ni link de pago (no aplican a un ingreso). */
+  esIngreso?: boolean;
   onGuardar: (input: ServicioInput) => Promise<void>;
 }
 
-export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdInicial, onGuardar }: Props) {
+export function ModalServicio({
+  abierto,
+  onCerrar,
+  servicioInicial,
+  planillaIdInicial,
+  esIngreso = false,
+  onGuardar,
+}: Props) {
   const editando = Boolean(servicioInicial);
   const [nombre, setNombre] = useState(servicioInicial?.nombre ?? '');
   const [empresa, setEmpresa] = useState(servicioInicial?.empresa ?? '');
   const [nroCliente, setNroCliente] = useState(servicioInicial?.nro_cliente ?? '');
-  const [diaVenc, setDiaVenc] = useState(
-    servicioInicial?.dia_vencimiento != null ? String(servicioInicial.dia_vencimiento) : '',
-  );
   const [urlPago, setUrlPago] = useState(servicioInicial?.url_pago ?? '');
   const [color, setColor] = useState(servicioInicial?.color ?? '#5F5E5A');
   const [acumulable, setAcumulable] = useState(servicioInicial?.acumulable ?? false);
@@ -39,10 +46,6 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
     setError(null);
     if (!nombre.trim()) return setError('Poné un nombre al servicio.');
 
-    const dia = editando && diaVenc.trim() !== '' ? Number(diaVenc) : null;
-    if (dia !== null && (Number.isNaN(dia) || dia < 1 || dia > 31))
-      return setError('El día de vencimiento debe estar entre 1 y 31.');
-
     setGuardando(true);
     try {
       await onGuardar({
@@ -50,7 +53,6 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
         empresa: empresa.trim() || null,
         nro_cliente: nroCliente.trim() || null,
         planilla_id: planillaId,
-        dia_vencimiento: dia,
         url_pago: urlPago.trim() || null,
         color,
         activo: servicioInicial?.activo ?? true,
@@ -65,71 +67,69 @@ export function ModalServicio({ abierto, onCerrar, servicioInicial, planillaIdIn
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} titulo={editando ? 'Editar servicio' : 'Nuevo servicio'}>
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo={
+        esIngreso
+          ? editando ? 'Editar concepto' : 'Nuevo concepto'
+          : editando ? 'Editar servicio' : 'Nuevo servicio'
+      }
+    >
       <form onSubmit={enviar} className="flex flex-col gap-3">
         {error && <FormMessage tipo="error">{error}</FormMessage>}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={esIngreso ? '' : 'grid grid-cols-2 gap-3'}>
           <div>
             <Label htmlFor="nombre">Nombre</Label>
             <Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Luz" required />
           </div>
-          <div>
-            <Label htmlFor="empresa">Proveedor</Label>
-            <Input id="empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} placeholder="EDET" />
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="nrocliente">N° de cliente</Label>
-          <Input
-            id="nrocliente"
-            value={nroCliente}
-            onChange={(e) => setNroCliente(e.target.value)}
-            placeholder="3712458-001"
-          />
-        </div>
-
-        <div className={editando ? 'grid grid-cols-2 gap-3' : ''}>
-          <div>
-            <Label htmlFor="srvcolor">Color</Label>
-            <div className="flex items-center gap-2">
-              <input
-                id="srvcolor"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-9 w-10 cursor-pointer rounded-lg border border-border bg-surface"
-              />
-              <Input value={color} onChange={(e) => setColor(e.target.value)} className="tabular uppercase" />
-            </div>
-          </div>
-          {editando && (
+          {!esIngreso && (
             <div>
-              <Label htmlFor="dia">Día de vencimiento</Label>
-              <Input
-                id="dia"
-                type="number"
-                min="1"
-                max="31"
-                value={diaVenc}
-                onChange={(e) => setDiaVenc(e.target.value)}
-                placeholder="10"
-              />
+              <Label htmlFor="empresa">Proveedor</Label>
+              <Input id="empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} placeholder="EDET" />
             </div>
           )}
         </div>
 
+        {!esIngreso && (
+          <div>
+            <Label htmlFor="nrocliente">N° de cliente</Label>
+            <Input
+              id="nrocliente"
+              value={nroCliente}
+              onChange={(e) => setNroCliente(e.target.value)}
+              placeholder="3712458-001"
+            />
+          </div>
+        )}
+
         <div>
-          <Label htmlFor="url">Link de pago</Label>
-          <Input
-            id="url"
-            type="url"
-            value={urlPago}
-            onChange={(e) => setUrlPago(e.target.value)}
-            placeholder="https://…"
-          />
+          <Label htmlFor="srvcolor">Color</Label>
+          <div className="flex items-center gap-2">
+            <input
+              id="srvcolor"
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-9 w-10 cursor-pointer rounded-lg border border-border bg-surface"
+            />
+            <Input value={color} onChange={(e) => setColor(e.target.value)} className="tabular uppercase" />
+          </div>
         </div>
+
+        {!esIngreso && (
+          <div>
+            <Label htmlFor="url">Link de pago</Label>
+            <Input
+              id="url"
+              type="url"
+              value={urlPago}
+              onChange={(e) => setUrlPago(e.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+        )}
 
         <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm">
           <input

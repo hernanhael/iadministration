@@ -56,6 +56,21 @@ export function formatearFechaCorta(fecha: string | Date | null | undefined): st
   return new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit' }).format(d);
 }
 
+/** 'YYYY-MM-DD' → 'DD/MM/AAAA', para mostrar en los inputs de fecha con tipeo. */
+export function isoADisplay(iso: string | null | undefined): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/** 'DD/MM/AAAA' → 'YYYY-MM-DD'. Devuelve null si no es una fecha completa válida. */
+export function displayAIso(display: string): string | null {
+  const m = display.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 /** A partir de 'YYYY-MM' y un día, arma 'YYYY-MM-DD' acotando al último día del mes. */
 export function vencimientoDelPeriodo(periodo: string, dia: number | null): string | null {
   if (!dia || !/^\d{4}-\d{2}$/.test(periodo)) return null;

@@ -143,6 +143,17 @@ export function IconMail({ className, size }: IconProps) {
   );
 }
 
+/** Calendario (disparador del desplegable de fecha en SelectorFecha). */
+export function IconCalendario({ className, size }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} aria-hidden>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
 export function IconBasura({ className, size }: IconProps) {
   return (
     <svg {...base(size)} className={className} aria-hidden>

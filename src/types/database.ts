@@ -47,7 +47,6 @@ export interface Database {
           empresa: string | null;
           nro_cliente: string | null;
           url_pago: string | null;
-          dia_vencimiento: number | null;
           color: string;
           activo: boolean;
           acumulable: boolean;
@@ -61,7 +60,6 @@ export interface Database {
           empresa?: string | null;
           nro_cliente?: string | null;
           url_pago?: string | null;
-          dia_vencimiento?: number | null;
           color?: string;
           activo?: boolean;
           acumulable?: boolean;

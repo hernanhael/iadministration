@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { GastoConServicio, Planilla } from '@/types/modelos';
 import { formatearMonto, porNombre, tuvoMovimiento } from '@/lib/formateo';
 import { GrillaGastos } from './GrillaGastos';
@@ -16,6 +16,28 @@ import {
 const iconoSuelto =
   'flex h-9 w-9 items-center justify-center rounded-lg transition-colors text-muted hover:bg-surface-2 hover:text-foreground';
 
+// Qué planillas quedaron colapsadas, persistido por pestaña del navegador: así se
+// mantiene al cambiar de Ingresos/Egresos o de página (Mes ↔ Histórico ↔ Gráficos)
+// y se vuelve a esta sección, pero se olvida al cerrar la pestaña.
+const CLAVE_COLAPSADAS = 'gastos-app:planillas-colapsadas';
+
+function leerColapsadas(): Record<string, boolean> {
+  try {
+    const guardado = window.sessionStorage.getItem(CLAVE_COLAPSADAS);
+    return guardado ? JSON.parse(guardado) : {};
+  } catch {
+    return {};
+  }
+}
+
+function guardarColapsadas(colapsadas: Record<string, boolean>) {
+  try {
+    window.sessionStorage.setItem(CLAVE_COLAPSADAS, JSON.stringify(colapsadas));
+  } catch {
+    // Almacenamiento no disponible (modo privado, cuota llena, etc.): no rompe la UI.
+  }
+}
+
 interface Props {
   gastos: GastoConServicio[];
   /** Planillas del usuario (definen orden, etiqueta y detalle de cada sección). */
@@ -29,6 +51,8 @@ interface Props {
   onEditarServicio?: (g: GastoConServicio) => void;
   onEliminarServicio?: (g: GastoConServicio) => void;
   onEditarGasto?: (g: GastoConServicio) => void;
+  onEditarMonto?: (g: GastoConServicio, monto: number | null) => void;
+  onEditarVencimiento?: (g: GastoConServicio, vencimiento: string | null) => void;
   onTogglePago?: (g: GastoConServicio) => void;
   onCargas?: (g: GastoConServicio) => void;
   // Gestión de la planilla, desde su propio encabezado (⋯) y el pie de la pila.
@@ -52,6 +76,18 @@ export function PlanillasPeriodo({
   const [colapsadas, setColapsadas] = useState<Record<string, boolean>>({});
   // Planillas desbloqueadas (modo edición). Por defecto bloqueadas (candado cerrado).
   const [desbloqueadas, setDesbloqueadas] = useState<Record<string, boolean>>({});
+
+  // Cargar el estado guardado recién en el cliente (evita mismatch de hidratación
+  // con lo renderizado en el servidor, que siempre arranca sin nada colapsado).
+  // Es un solo re-render extra al montar, no una cascada: por eso se desactiva la regla.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setColapsadas(leerColapsadas());
+  }, []);
+
+  useEffect(() => {
+    guardarColapsadas(colapsadas);
+  }, [colapsadas]);
 
   const porPlanilla = useMemo(() => {
     const map: Record<string, GastoConServicio[]> = {};

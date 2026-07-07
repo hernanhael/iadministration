@@ -3,36 +3,24 @@
 import { useState } from 'react';
 import type { GastoInput } from '@/hooks/useGastos';
 import type { GastoConServicio } from '@/types/modelos';
-import { periodoActual } from '@/lib/formateo';
+import { displayAIso, isoADisplay, periodoActual } from '@/lib/formateo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { SelectorFecha } from '@/components/ui/SelectorFecha';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormMessage } from '@/components/ui/FormMessage';
 
-// Convierte YYYY-MM-DD → DD/MM/AAAA para mostrar en el campo.
-function isoADisplay(iso: string): string {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-// Convierte DD/MM/AAAA → YYYY-MM-DD para guardar. Devuelve null si no es válida.
-function displayAIso(display: string): string | null {
-  const m = display.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
-}
-
 interface Props {
   gastoInicial?: GastoConServicio | null;
+  /** Planilla de ingreso: sin campo Vencimiento (un ingreso no vence). */
+  esIngreso?: boolean;
   onGuardar: (input: GastoInput) => Promise<void>;
   onExito?: () => void;
   onCancelar?: () => void;
 }
 
-export function FormularioGasto({ gastoInicial, onGuardar, onExito, onCancelar }: Props) {
+export function FormularioGasto({ gastoInicial, esIngreso = false, onGuardar, onExito, onCancelar }: Props) {
   const servicioId = gastoInicial?.servicio_id ?? '';
   const periodo = gastoInicial?.periodo ?? periodoActual();
 
@@ -93,28 +81,16 @@ export function FormularioGasto({ gastoInicial, onGuardar, onExito, onCancelar }
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor="vencimiento">Vencimiento</Label>
-          <Input
-            id="vencimiento"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/mm/aaaa"
-            value={vencimiento}
-            onChange={(e) => setVencimiento(e.target.value)}
-          />
-        </div>
+      <div className={esIngreso ? '' : 'grid grid-cols-2 gap-3'}>
+        {!esIngreso && (
+          <div>
+            <Label htmlFor="vencimiento">Vencimiento</Label>
+            <SelectorFecha id="vencimiento" value={vencimiento} onChange={setVencimiento} />
+          </div>
+        )}
         <div>
           <Label htmlFor="fechaPago">Fecha de pago</Label>
-          <Input
-            id="fechaPago"
-            type="text"
-            inputMode="numeric"
-            placeholder="dd/mm/aaaa"
-            value={fechaPago}
-            onChange={(e) => setFechaPago(e.target.value)}
-          />
+          <SelectorFecha id="fechaPago" value={fechaPago} onChange={setFechaPago} />
           <p className="mt-1 text-xs text-muted">Si la cargás, queda como pagado.</p>
         </div>
       </div>
