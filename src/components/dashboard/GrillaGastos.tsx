@@ -204,6 +204,8 @@ export function GrillaGastos({
 }: Props) {
   // Histórico > Ingresos: la grilla se reduce a Ingreso + Monto.
   const soloIngresoYMonto = soloLectura && sinVencimiento;
+  // Móvil: qué fila está expandida mostrando su detalle (una sola a la vez).
+  const [expandida, setExpandida] = useState<string | null>(null);
   const cols = soloIngresoYMonto
     ? COLS_RO_INGRESO
     : soloLectura
@@ -453,7 +455,7 @@ export function GrillaGastos({
         })}
       </div>
 
-      {/* -------- Móvil: tarjetas apiladas -------- */}
+      {/* -------- Móvil: filas compactas, expandibles al toque -------- */}
       <div className="md:hidden">
         {vacia && (
           <p className="px-4 py-8 text-center text-sm text-muted">No hay gastos en esta planilla.</p>
@@ -464,31 +466,160 @@ export function GrillaGastos({
           const dimCls = f.pagado || f.sinCargar ? 'opacity-60' : '';
           const filaDim = soloLectura ? dimCls : f.pagado ? '' : dimCls;
           const celdaDim = soloLectura ? '' : f.pagado ? dimCls : '';
+          const acum = Boolean(g.servicios?.acumulable);
+          const abierta = expandida === g.id;
+          const sub = [g.servicios?.empresa, g.servicios?.nro_cliente].filter(Boolean).join(' · ');
+
+          // Acción rápida al borde derecho de la fila compacta: marcar pagado/cobrado
+          // (o agregar carga si es acumulable). El resto vive en la fila expandida.
+          const rapida = (() => {
+            if (soloIngresoYMonto) return null;
+            if (soloLectura) {
+              const pagadoRO = acum ? Boolean(ultimaFechaCarga(g.cargas)) : f.pagado;
+              return (
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center ${
+                    !pagadoRO ? 'text-transparent' : f.pagadoTarde ? 'text-danger' : 'text-brand'
+                  }`}
+                >
+                  {pagadoRO && <IconCheck size={16} />}
+                </span>
+              );
+            }
+            if (acum) {
+              return (
+                <button
+                  type="button"
+                  aria-label="Cargas del mes"
+                  title="Cargas del mes"
+                  onClick={() => onCargas?.(g)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:text-brand"
+                >
+                  <IconMas />
+                </button>
+              );
+            }
+            if (f.pagado) {
+              return (
+                <button
+                  type="button"
+                  aria-label="Pagado — tocar para marcar como pendiente"
+                  title="Pagado — tocar para marcar como pendiente"
+                  onClick={() => onTogglePago?.(g)}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                    f.pagadoTarde ? 'text-danger' : 'text-brand'
+                  }`}
+                >
+                  <IconCheck />
+                </button>
+              );
+            }
+            if (g.monto == null) {
+              return (
+                <button
+                  type="button"
+                  aria-label="Sin monto cargado: no se puede marcar como pagado"
+                  title="Sin monto cargado: no se puede marcar como pagado"
+                  disabled
+                  className="flex h-9 w-9 shrink-0 cursor-not-allowed items-center justify-center rounded-lg text-muted/40"
+                >
+                  <IconCheck />
+                </button>
+              );
+            }
+            return (
+              <button
+                type="button"
+                aria-label="Marcar como pagado hoy"
+                title="Marcar como pagado hoy"
+                onClick={() => onTogglePago?.(g)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:text-brand"
+              >
+                <IconCheck />
+              </button>
+            );
+          })();
+
           return (
-            <div key={g.id} className={`border-b border-border px-4 py-3 last:border-0 ${filaDim}`}>
-              <div className={`flex items-start justify-between gap-3 ${celdaDim}`}>
-                {Servicio(g)}
-                <div className="shrink-0 text-right">{Monto(g)}</div>
+            <div key={g.id} className={`border-b border-border last:border-0 ${filaDim}`}>
+              <div className="flex items-center pl-4 pr-2">
+                <button
+                  type="button"
+                  aria-expanded={abierta}
+                  onClick={() => setExpandida(abierta ? null : g.id)}
+                  className={`flex min-w-0 flex-1 items-center gap-2 py-2.5 text-left ${celdaDim}`}
+                >
+                  {g.servicios && <PuntoColor color={g.servicios.color} />}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">{g.servicios?.nombre ?? '—'}</span>
+                      {g.origen_email && (
+                        <span title="Cargado automáticamente desde un correo" className="shrink-0 text-muted">
+                          <IconMail size={13} />
+                        </span>
+                      )}
+                    </span>
+                    {/* Vencimiento a la vista solo mientras está pendiente. */}
+                    {!sinVencimiento && !acum && !f.pagado && g.vencimiento && (
+                      <span
+                        className={`block text-[0.7rem] ${
+                          f.vencido ? 'font-semibold text-danger' : 'text-muted'
+                        }`}
+                      >
+                        Vence {formatearFechaCorta(g.vencimiento)}
+                        {f.vencido && ' — vencido'}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={`tabular shrink-0 text-sm ${
+                      acum || g.monto_confirmado
+                        ? 'font-extrabold'
+                        : 'font-semibold italic text-muted'
+                    }`}
+                  >
+                    {formatearMonto(
+                      acum ? (g.cargas?.length ? sumarCargas(g.cargas) : null) : g.monto,
+                    )}
+                  </span>
+                </button>
+                {rapida}
               </div>
 
-              {!soloIngresoYMonto && (
-                <div className="mt-2.5 flex items-end justify-between gap-3">
-                  {!sinVencimiento && (
-                    <div className={celdaDim}>
-                      <span className="block text-[0.7rem] uppercase tracking-wide text-muted">Vencimiento</span>
-                      {Vencimiento(g, f.vencido)}
-                    </div>
-                  )}
-                  <div className={sinVencimiento ? 'w-full' : 'text-right'}>
-                    <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
-                      {sinVencimiento ? 'Cobro' : 'Pago'}
-                    </span>
-                    <div className={sinVencimiento ? '' : 'flex justify-end'}>{Pago(g, f)}</div>
+              {abierta && (
+                <div className="flex flex-col gap-2.5 px-4 pb-3">
+                  {sub && <div className={`text-xs text-muted ${celdaDim}`}>{sub}</div>}
+                  <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+                    {/* El monto de la línea compacta no es editable: acá sí (al toque
+                        con la planilla desbloqueada) y con el detalle de cargas. */}
+                    {(puedeEditar || acum) && !soloLectura && (
+                      <div className={celdaDim}>
+                        <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                          Monto
+                        </span>
+                        {Monto(g)}
+                      </div>
+                    )}
+                    {!sinVencimiento && !acum && (
+                      <div className={celdaDim}>
+                        <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                          Vencimiento
+                        </span>
+                        {Vencimiento(g, f.vencido)}
+                      </div>
+                    )}
+                    {!soloIngresoYMonto && (
+                      <div>
+                        <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
+                          {sinVencimiento ? 'Cobro' : 'Pago'}
+                        </span>
+                        {Pago(g, f)}
+                      </div>
+                    )}
                   </div>
+                  {!soloLectura && Acciones(g)}
                 </div>
               )}
-
-              {!soloLectura && <div className="mt-3 border-t border-border pt-2.5">{Acciones(g)}</div>}
             </div>
           );
         })}
