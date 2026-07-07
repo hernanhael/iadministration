@@ -1,4 +1,4 @@
-# gastos-app
+# iadministration-app
 
 App web personal para administrar gastos fijos (vivienda, auto, personales) e ingresos mensuales. En producción en Vercel.
 

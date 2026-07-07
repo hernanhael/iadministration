@@ -19,7 +19,7 @@ const iconoSuelto =
 // Qué planillas quedaron colapsadas, persistido por pestaña del navegador: así se
 // mantiene al cambiar de Ingresos/Egresos o de página (Mes ↔ Histórico ↔ Gráficos)
 // y se vuelve a esta sección, pero se olvida al cerrar la pestaña.
-const CLAVE_COLAPSADAS = 'gastos-app:planillas-colapsadas';
+const CLAVE_COLAPSADAS = 'iadministration:planillas-colapsadas';
 
 function leerColapsadas(): Record<string, boolean> {
   try {
