@@ -106,7 +106,7 @@ function CeldaMonto({
           if (e.key === 'Enter') { e.preventDefault(); confirmar(); }
           if (e.key === 'Escape') { e.preventDefault(); setEditando(false); }
         }}
-        className="tabular w-full rounded-lg border border-muted bg-surface-2 px-2 py-1 text-sm font-extrabold text-foreground outline-none"
+        className="tabular w-full rounded-lg border border-muted bg-surface-2 px-2 py-1 text-base font-extrabold text-foreground outline-none"
       />
     );
   }
@@ -571,18 +571,24 @@ export function GrillaGastos({
                       </span>
                     )}
                   </span>
-                  <span
-                    className={`tabular shrink-0 text-sm ${
-                      acum || g.monto_confirmado
-                        ? 'font-extrabold'
-                        : 'font-semibold italic text-muted'
-                    }`}
-                  >
-                    {formatearMonto(
-                      acum ? (g.cargas?.length ? sumarCargas(g.cargas) : null) : g.monto,
-                    )}
-                  </span>
                 </button>
+                {/* Monto: fuera del botón que expande, para poder editarlo al toque
+                    sin que dispare también el expandir/colapsar. Los acumulables
+                    (nafta) muestran el total en una sola línea; el detalle de
+                    cargas queda en la fila expandida. */}
+                <div className={`tabular shrink-0 text-sm ${celdaDim}`}>
+                  {acum ? (
+                    <span className="font-extrabold">
+                      {formatearMonto(g.cargas?.length ? sumarCargas(g.cargas) : null)}
+                    </span>
+                  ) : (
+                    <CeldaMonto
+                      gasto={g}
+                      editable={puedeEditar}
+                      onGuardar={(monto) => onEditarMonto?.(g, monto)}
+                    />
+                  )}
+                </div>
                 {rapida}
               </div>
 
@@ -590,9 +596,9 @@ export function GrillaGastos({
                 <div className="flex flex-col gap-2.5 px-4 pb-3">
                   {sub && <div className={`text-xs text-muted ${celdaDim}`}>{sub}</div>}
                   <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-                    {/* El monto de la línea compacta no es editable: acá sí (al toque
-                        con la planilla desbloqueada) y con el detalle de cargas. */}
-                    {(puedeEditar || acum) && !soloLectura && (
+                    {/* Solo acumulables (nafta): resumen de cargas del mes.
+                        El resto edita el monto directo en la línea compacta. */}
+                    {acum && !soloLectura && (
                       <div className={celdaDim}>
                         <span className="mb-0.5 block text-[0.7rem] uppercase tracking-wide text-muted">
                           Monto
@@ -616,8 +622,8 @@ export function GrillaGastos({
                         {Pago(g, f)}
                       </div>
                     )}
+                    {!soloLectura && <div className="ml-auto">{Acciones(g)}</div>}
                   </div>
-                  {!soloLectura && Acciones(g)}
                 </div>
               )}
             </div>
