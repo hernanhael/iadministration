@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { formatearPeriodo } from '@/lib/formateo';
+import { formatearPeriodo, hoyArgentina } from '@/lib/formateo';
 import { IconChevron } from './icons';
 
 const DIAS_SEMANA = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
@@ -38,8 +38,8 @@ interface Props {
 export function CalendarioMensual({ value, onElegir, children, align = 'left' }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [vista, setVista] = useState(() => {
-    const hoy = new Date();
-    return parsear(value) ?? { y: hoy.getFullYear(), m: hoy.getMonth() + 1, d: 0 };
+    const [y, m] = hoyArgentina().split('-').map(Number);
+    return parsear(value) ?? { y, m, d: 0 };
   });
   const ref = useRef<HTMLDivElement>(null);
   const sel = parsear(value);
@@ -63,8 +63,8 @@ export function CalendarioMensual({ value, onElegir, children, align = 'left' }:
   function alternar() {
     setAbierto((estaba) => {
       if (!estaba) {
-        const hoy = new Date();
-        setVista(parsear(value) ?? { y: hoy.getFullYear(), m: hoy.getMonth() + 1, d: 0 });
+        const [y, m] = hoyArgentina().split('-').map(Number);
+        setVista(parsear(value) ?? { y, m, d: 0 });
       }
       return !estaba;
     });

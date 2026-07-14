@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Carga } from '@/types/modelos';
-import { formatearFecha, formatearMonto, sumarCargas } from '@/lib/formateo';
+import { formatearFecha, formatearMonto, hoyArgentina, sumarCargas } from '@/lib/formateo';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -20,7 +20,7 @@ interface Props {
   onGuardar: (cargas: Carga[]) => Promise<void>;
 }
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = hoyArgentina;
 
 /** Gestiona las cargas del mes de un servicio acumulable (ej. nafta). */
 export function ModalCargas({

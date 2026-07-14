@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { formatearPeriodo } from '@/lib/formateo';
+import { formatearPeriodo, periodoActual } from '@/lib/formateo';
 import { IconChevron } from './icons';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -29,7 +29,7 @@ const clave = (y: number, m: number) => y * 100 + m;
 /** Selector de mes/año con el diseño del proyecto (reemplaza al input nativo type="month"). */
 export function SelectorMes({ value, onChange, min, max, id, variant = 'caja' }: Props) {
   const [abierto, setAbierto] = useState(false);
-  const [anio, setAnio] = useState(() => parse(value)?.y ?? new Date().getFullYear());
+  const [anio, setAnio] = useState(() => parse(value)?.y ?? parse(periodoActual())!.y);
   const ref = useRef<HTMLDivElement>(null);
 
   const sel = parse(value);
@@ -53,7 +53,7 @@ export function SelectorMes({ value, onChange, min, max, id, variant = 'caja' }:
   }, [abierto]);
 
   function abrir() {
-    setAnio(parse(value)?.y ?? new Date().getFullYear());
+    setAnio(parse(value)?.y ?? parse(periodoActual())!.y);
     setAbierto((a) => !a);
   }
 

@@ -87,11 +87,32 @@ export function sumarMeses(periodo: string, n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Período actual en formato 'YYYY-MM'. */
+const TZ_ARGENTINA = 'America/Argentina/Buenos_Aires';
+
+/** Año/mes/día de una fecha según el huso horario de Argentina (UTC-3, sin horario de
+ *  verano), sin importar el huso horario del entorno donde corre el proceso (el navegador
+ *  del usuario, o una función serverless que por defecto corre en UTC). */
+function partesEnArgentina(d: Date = new Date()): { year: number; month: number; day: number } {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ_ARGENTINA,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+  const obj = Object.fromEntries(partes.map((p) => [p.type, p.value]));
+  return { year: Number(obj.year), month: Number(obj.month), day: Number(obj.day) };
+}
+
+/** 'YYYY-MM-DD' de hoy, en el huso horario de Argentina. */
+export function hoyArgentina(d: Date = new Date()): string {
+  const { year, month, day } = partesEnArgentina(d);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** Período actual en formato 'YYYY-MM', según el huso horario de Argentina. */
 export function periodoActual(d: Date = new Date()): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
+  const { year, month } = partesEnArgentina(d);
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
 
 /** '2026-06' → 'junio 2026'. */
@@ -106,14 +127,11 @@ export function formatearPeriodo(periodo: string): string {
   return txt.charAt(0).toUpperCase() + txt.slice(1);
 }
 
-/** "Vencido" es estado derivado: pendiente y vencimiento anterior a hoy. */
+/** "Vencido" es estado derivado: pendiente y vencimiento anterior a hoy (Argentina). */
 export function estaVencido(
   estado: 'pendiente' | 'pagado',
   vencimiento: string | null | undefined,
 ): boolean {
   if (estado !== 'pendiente' || !vencimiento) return false;
-  const venc = new Date(`${vencimiento}T00:00:00`);
-  const ahora = new Date();
-  ahora.setHours(0, 0, 0, 0);
-  return venc < ahora;
+  return vencimiento < hoyArgentina();
 }

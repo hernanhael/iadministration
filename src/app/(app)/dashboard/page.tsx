@@ -5,7 +5,7 @@ import { useGastos, type GastoInput } from '@/hooks/useGastos';
 import { useServicios } from '@/hooks/useServicios';
 import { usePlanillas } from '@/hooks/usePlanillas';
 import type { Carga, GastoConServicio, Planilla, ServicioConPlanilla } from '@/types/modelos';
-import { formatearMonto, formatearPeriodo, periodoActual, sumarCargas, ultimaFechaCarga } from '@/lib/formateo';
+import { formatearMonto, formatearPeriodo, hoyArgentina, periodoActual, sumarCargas, ultimaFechaCarga } from '@/lib/formateo';
 import { ResumenCards } from '@/components/dashboard/ResumenCards';
 import { PlanillasPeriodo } from '@/components/dashboard/PlanillasPeriodo';
 import { TabTipo } from '@/components/ui/TabTipo';
@@ -145,7 +145,7 @@ export default function MesPage() {
   }, [delMes, pl.planillas]);
 
   function togglePago(g: GastoConServicio) {
-    const fecha_pago = g.estado === 'pagado' ? null : new Date().toISOString().slice(0, 10);
+    const fecha_pago = g.estado === 'pagado' ? null : hoyArgentina();
     const input: GastoInput = {
       servicio_id: g.servicio_id,
       periodo: g.periodo,
@@ -393,7 +393,7 @@ export default function MesPage() {
                 gasto: ocrPara.gasto,
                 draft: {
                   monto: datos.monto ?? 0,
-                  fecha: datos.vencimiento ?? new Date().toISOString().slice(0, 10),
+                  fecha: datos.vencimiento ?? hoyArgentina(),
                 },
               });
             } else {
