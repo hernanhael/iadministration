@@ -25,6 +25,19 @@ export function porNombre(a: { nombre: string }, b: { nombre: string }): number 
   return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
 }
 
+const PREPOSICIONES_SIGLAS = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'y', 'en', 'a', 'al']);
+
+/** Siglas de un nombre compuesto (ignora preposiciones/artículos cortos), p. ej.
+ *  "Contribución Inmobiliaria de Servicios Integrados" → "CISI". Se usa en móvil
+ *  para nombres muy largos que no entran en la fila compacta. */
+export function siglas(nombre: string): string {
+  return nombre
+    .split(/\s+/)
+    .filter((palabra) => palabra && !PREPOSICIONES_SIGLAS.has(palabra.toLowerCase()))
+    .map((palabra) => palabra[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 const monedaARS = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',

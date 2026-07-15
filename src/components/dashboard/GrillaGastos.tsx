@@ -9,6 +9,7 @@ import {
   formatearFechaCorta,
   formatearMonto,
   isoADisplay,
+  siglas,
   sumarCargas,
   tuvoMovimiento,
   ultimaFechaCarga,
@@ -17,7 +18,12 @@ import { PuntoColor } from '@/components/ui/Badge';
 import { CalendarioMensual } from '@/components/ui/CalendarioMensual';
 import { IconButton, IconLinkButton, clasesIconButton } from '@/components/ui/IconButton';
 import { MenuAcciones } from '@/components/ui/MenuAcciones';
-import { IconCamaraDoc, IconCheck, IconLink, IconMail, IconMas } from '@/components/ui/icons';
+import { IconCamaraDoc, IconCheck, IconLink, IconMas } from '@/components/ui/icons';
+
+/** Nombres más largos que esto no entran en la fila compacta de móvil: se
+ *  muestran como siglas (ver `siglas` en formateo.ts) y el nombre completo
+ *  queda disponible al expandir la fila. */
+const NOMBRE_LARGO = 18;
 
 interface Props {
   gastos: GastoConServicio[];
@@ -221,11 +227,6 @@ export function GrillaGastos({
         <div className="flex items-center gap-2">
           {g.servicios && <PuntoColor color={g.servicios.color} />}
           <span className="truncate text-sm font-semibold">{g.servicios?.nombre ?? '—'}</span>
-          {g.origen_email && (
-            <span title="Cargado automáticamente desde un correo" className="shrink-0 text-muted">
-              <IconMail size={14} />
-            </span>
-          )}
         </div>
         {sub && <div className="mt-0.5 truncate text-xs text-muted">{sub}</div>}
       </div>
@@ -469,6 +470,9 @@ export function GrillaGastos({
           const acum = Boolean(g.servicios?.acumulable);
           const abierta = expandida === g.id;
           const sub = [g.servicios?.empresa, g.servicios?.nro_cliente].filter(Boolean).join(' · ');
+          const nombreCompleto = g.servicios?.nombre ?? '—';
+          const nombreLargo = nombreCompleto.length > NOMBRE_LARGO;
+          const nombreMostrado = nombreLargo ? siglas(nombreCompleto) : nombreCompleto;
 
           // Acción rápida al borde derecho de la fila compacta: marcar pagado/cobrado
           // (o agregar carga si es acumulable). El resto vive en la fila expandida.
@@ -551,13 +555,11 @@ export function GrillaGastos({
                 >
                   {g.servicios && <PuntoColor color={g.servicios.color} />}
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold">{g.servicios?.nombre ?? '—'}</span>
-                      {g.origen_email && (
-                        <span title="Cargado automáticamente desde un correo" className="shrink-0 text-muted">
-                          <IconMail size={13} />
-                        </span>
-                      )}
+                    <span
+                      className="block truncate text-sm font-semibold"
+                      title={nombreLargo ? nombreCompleto : undefined}
+                    >
+                      {nombreMostrado}
                     </span>
                     {/* Vencimiento a la vista solo mientras está pendiente. */}
                     {!sinVencimiento && !acum && !f.pagado && g.vencimiento && (
@@ -594,6 +596,9 @@ export function GrillaGastos({
 
               {abierta && (
                 <div className="flex flex-col gap-2.5 px-4 pb-3">
+                  {nombreLargo && (
+                    <div className={`text-sm font-semibold ${celdaDim}`}>{nombreCompleto}</div>
+                  )}
                   {sub && <div className={`text-xs text-muted ${celdaDim}`}>{sub}</div>}
                   <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
                     {/* Solo acumulables (nafta): resumen de cargas del mes.

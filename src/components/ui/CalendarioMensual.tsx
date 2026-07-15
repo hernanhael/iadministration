@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { formatearPeriodo, hoyArgentina } from '@/lib/formateo';
 import { IconChevron } from './icons';
 
 const DIAS_SEMANA = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+const ANCHO_POPOVER = 256; // w-64
+const ALTO_POPOVER_APROX = 300;
+const MARGEN_VIEWPORT = 8;
 
 function parsear(v: string): { y: number; m: number; d: number } | null {
   const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -34,20 +38,53 @@ interface Props {
 
 /** Calendario desplegable reutilizable: navegación de mes con chevrons + grilla de
  *  días, mismo lenguaje visual que el resto de la app (ver SelectorMes). Se usa tanto
- *  en SelectorFecha (formularios) como en las celdas editables de GrillaGastos. */
+ *  en SelectorFecha (formularios) como en las celdas editables de GrillaGastos.
+ *
+ *  El desplegable se renderiza por portal a `document.body` (mismo patrón que
+ *  `Modal`): así no hereda la opacidad reducida de una fila atenuada (ej. un
+ *  gasto ya pagado) ni queda recortado por el `overflow-hidden` de la grilla,
+ *  y se puede posicionar clamp-eado dentro del viewport en pantallas chicas. */
 export function CalendarioMensual({ value, onElegir, children, align = 'left' }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [vista, setVista] = useState(() => {
     const [y, m] = hoyArgentina().split('-').map(Number);
     return parsear(value) ?? { y, m, d: 0 };
   });
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const sel = parsear(value);
 
   useEffect(() => {
     if (!abierto) return;
+    const actualizarPos = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      let left = align === 'right' ? r.right - ANCHO_POPOVER : r.left;
+      left = Math.min(Math.max(MARGEN_VIEWPORT, left), window.innerWidth - ANCHO_POPOVER - MARGEN_VIEWPORT);
+      let top = r.bottom + 4;
+      if (top + ALTO_POPOVER_APROX > window.innerHeight - MARGEN_VIEWPORT) {
+        top = Math.max(MARGEN_VIEWPORT, r.top - ALTO_POPOVER_APROX - 4);
+      }
+      setPos({ top, left });
+    };
+    actualizarPos();
+    window.addEventListener('resize', actualizarPos);
+    window.addEventListener('scroll', actualizarPos, true);
+    return () => {
+      window.removeEventListener('resize', actualizarPos);
+      window.removeEventListener('scroll', actualizarPos, true);
+    };
+  }, [abierto, align]);
+
+  useEffect(() => {
+    if (!abierto) return;
     const alClickear = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
+      const objetivo = e.target as Node;
+      if (triggerRef.current?.contains(objetivo)) return;
+      if (popRef.current?.contains(objetivo)) return;
+      setAbierto(false);
     };
     const alTeclear = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setAbierto(false);
@@ -89,14 +126,14 @@ export function CalendarioMensual({ value, onElegir, children, align = 'left' }:
   const celdas: (number | null)[] = [...Array(offset).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={triggerRef} className="relative">
       {children({ abierto, alternar })}
 
-      {abierto && (
+      {abierto && pos && createPortal(
         <div
-          className={`absolute z-30 mt-1 w-64 rounded-xl border border-border bg-surface p-3 shadow-xl ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          ref={popRef}
+          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-[60] w-64 rounded-xl border border-border bg-surface p-3 shadow-xl"
         >
           <div className="mb-2 flex items-center justify-between">
             <button
@@ -146,7 +183,8 @@ export function CalendarioMensual({ value, onElegir, children, align = 'left' }:
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
